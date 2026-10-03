@@ -25,7 +25,10 @@ Use --ratios to choose different proportions instead.
 
 The output is written to a new directory; the input dataset is never modified.
 
-Example:
+Usage: set INPUT_DIR / OUTPUT_DIR in the SETTINGS block below, then run
+    python scripts/subject_split.py
+
+Command-line flags override the settings, e.g.:
     python scripts/subject_split.py --input data/original --output data/subject_split
     python scripts/subject_split.py --input data/original --output data/subject_split \
         --ratios 0.7 0.15 0.15 --stratify --seed 42
@@ -42,6 +45,19 @@ import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
+
+# ============================================================================
+# SETTINGS - edit these and just run:  python scripts/subject_split.py
+# (Windows paths work as-is thanks to the r"..." prefix, e.g. r"C:\Users\me\dataset")
+# ============================================================================
+INPUT_DIR = r"path/to/your/dataset"            # folder containing train/ valid/ test/
+OUTPUT_DIR = r"path/to/your/dataset_subject_split"  # new dataset is written here
+RATIOS = None          # None = keep original split sizes, or e.g. (0.7, 0.15, 0.15)
+STRATIFY = False       # True = also balance classes across splits
+SEED = 42              # change to get a different (but repeatable) split
+DRY_RUN = False        # True = only print the report, write nothing
+OVERWRITE = False      # True = delete OUTPUT_DIR first if it already exists
+# ============================================================================
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
 SPLIT_NAMES = ("train", "valid", "test")
@@ -270,17 +286,25 @@ def report(samples: list[Sample], assignment: dict[str, str], splits: list[str])
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--input", required=True, type=Path,
-                    help="dataset root containing train/ valid/ test/ folders")
-    ap.add_argument("--output", required=True, type=Path, help="where to write the new dataset")
+    ap.add_argument("--input", type=Path, default=Path(INPUT_DIR),
+                    help="dataset root containing train/ valid/ test/ folders (default: INPUT_DIR)")
+    ap.add_argument("--output", type=Path, default=Path(OUTPUT_DIR),
+                    help="where to write the new dataset (default: OUTPUT_DIR)")
     ap.add_argument("--ratios", nargs=3, type=float, metavar=("TRAIN", "VALID", "TEST"),
+                    default=list(RATIOS) if RATIOS else None,
                     help="target fractions; default = keep the original split sizes")
-    ap.add_argument("--stratify", action="store_true",
+    ap.add_argument("--stratify", action="store_true", default=STRATIFY,
                     help="also balance class distribution across splits (by each subject's majority label)")
-    ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--dry-run", action="store_true", help="only print the report, write nothing")
-    ap.add_argument("--overwrite", action="store_true", help="replace --output if it exists")
+    ap.add_argument("--seed", type=int, default=SEED)
+    ap.add_argument("--dry-run", action="store_true", default=DRY_RUN,
+                    help="only print the report, write nothing")
+    ap.add_argument("--overwrite", action="store_true", default=OVERWRITE,
+                    help="replace --output if it exists")
     args = ap.parse_args(argv)
+
+    if not args.input.is_dir():
+        raise SystemExit(f"input folder not found: {args.input}\n"
+                         "Set INPUT_DIR at the top of scripts/subject_split.py (or pass --input).")
 
     in_root = args.input.resolve()
     out_root = args.output.resolve()

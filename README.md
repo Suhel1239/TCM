@@ -9,6 +9,15 @@ The original train/valid/test split mixed images of the same person across split
 subject is in exactly one split**, while keeping split sizes the same (or within one
 subject) as before.
 
+**Easiest:** open `scripts/subject_split.py`, set `INPUT_DIR` and `OUTPUT_DIR` in the
+`SETTINGS` block at the top (plus `RATIOS` / `STRATIFY` if you like), then run:
+
+```bash
+python scripts/subject_split.py
+```
+
+Command-line flags still work and override the settings:
+
 ```bash
 # keep the original split sizes (default)
 python scripts/subject_split.py --input path/to/dataset --output path/to/dataset_subject_split
