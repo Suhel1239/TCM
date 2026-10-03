@@ -65,8 +65,6 @@ STRATIFY = False       # True = also balance classes across splits
 SEED = 42              # change to get a different (but repeatable) split
 DRY_RUN = False        # True = only print the report, write nothing
 OVERWRITE = False      # True = delete OUTPUT_DIR first if it already exists
-CONVERT_TO_MDETR = False  # True = convert the new splits' COCO json to MDETR format
-                          # (settings for that are at the top of scripts/to_mdetr.py)
 # ============================================================================
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
@@ -487,8 +485,6 @@ def main(argv: list[str] | None = None) -> int:
                     help="only print the report, write nothing")
     ap.add_argument("--overwrite", action="store_true", default=OVERWRITE,
                     help="replace --output if it exists")
-    ap.add_argument("--mdetr", action="store_true", default=CONVERT_TO_MDETR,
-                    help="convert the new splits' COCO json files to MDETR format")
     args = ap.parse_args(argv)
 
     if not args.input.is_dir():
@@ -554,11 +550,6 @@ def main(argv: list[str] | None = None) -> int:
         names = ", ".join(f"{dir_names[sp]}/{js.out_names.get(sp, js.name)}" for sp in splits)
         print(f"Annotations ({js.kind} format) re-split into: {names}")
     print(f"Per-image assignment saved to {out_root / 'split_manifest.csv'}")
-    if args.mdetr:
-        sys.path.insert(0, str(Path(__file__).resolve().parent))
-        import to_mdetr
-        print("\nConverting annotations to MDETR format:")
-        to_mdetr.convert_dataset(out_root)
     return 0
 
 

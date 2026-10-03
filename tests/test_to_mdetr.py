@@ -71,9 +71,10 @@ def test_unknown_category_warns():
     assert len(out["images"]) == 3 and any("acupoints" in w for w in warnings)
 
 
-def test_split_then_mdetr_end_to_end(tmp_path):
-    src, out = tmp_path / "src", tmp_path / "out"
+def test_mdetr_file_can_be_resplit(tmp_path):
+    """An MDETR json can be re-split by subject; all entries of one image move together."""
     rng = random.Random(3)
+    src, out = tmp_path / "src", tmp_path / "out"
     per_split = {"train": [], "valid": [], "test": []}
     for sid in range(1, 31):
         for k in range(1, 8):
@@ -83,28 +84,41 @@ def test_split_then_mdetr_end_to_end(tmp_path):
             (src / sp / name).write_bytes(b"x")
             per_split[sp].append(name)
     for sp, files in per_split.items():
-        (src / sp / f"{sp}.json").write_text(json.dumps(coco(files)))
+        mdetr, _ = to_mdetr.convert(coco(files), rng)
+        (src / sp / f"{sp}.json").write_text(json.dumps(mdetr))
 
-    assert subject_split.main(["--input", str(src), "--output", str(out), "--mdetr"]) == 0
-    subjects = {}
+    assert subject_split.main(["--input", str(src), "--output", str(out)]) == 0
+    subjects, total = {}, 0
     for sp in per_split:
         data = json.loads((out / sp / f"{sp}.json").read_text())
-        assert set(data) == {"images", "annotations", "info", "licenses"}
+        assert "categories" not in data and all("sentences" in im for im in data["images"])
         files = {im["file_name"] for im in data["images"]}
         assert files == {p.name for p in (out / sp).glob("*.png")}
-        assert len(data["images"]) == 4 * len(files)
+        assert {a["image_id"] for a in data["annotations"]} == {im["id"] for im in data["images"]}
         subjects[sp] = {f.split("_")[0] for f in files}
+        total += len(data["images"])
+    assert total == 4 * 30 * 7
     assert not (subjects["train"] & subjects["valid"] or subjects["train"] & subjects["test"]
                 or subjects["valid"] & subjects["test"])
 
-    # an MDETR dataset can itself be re-split; all entries of an image move together
-    out2 = tmp_path / "out2"
-    assert subject_split.main(["--input", str(out), "--output", str(out2), "--seed", "7"]) == 0
-    total = 0
-    for sp in per_split:
-        data = json.loads((out2 / sp / f"{sp}.json").read_text())
-        assert "categories" not in data and all("sentences" in im for im in data["images"])
-        assert {im["file_name"] for im in data["images"]} == {p.name for p in (out2 / sp).glob("*.png")}
-        assert {a["image_id"] for a in data["annotations"]} == {im["id"] for im in data["images"]}
-        total += len(data["images"])
-    assert total == 4 * 30 * 7
+
+def test_single_file_creates_new_json(tmp_path):
+    src = tmp_path / "train.json"
+    original = coco(["001_1_JPG.rf.a.png", "002_3_JPG.rf.b.png"])
+    src.write_text(json.dumps(original))
+    dst = tmp_path / "out" / "train_mdetr.json"
+    assert to_mdetr.main(["--input", str(src), "--output", str(dst)]) == 0
+    assert json.loads(src.read_text()) == original  # input untouched
+    data = json.loads(dst.read_text())
+    assert len(data["images"]) == 8 and all("sentences" in im for im in data["images"])
+
+
+def test_refuses_to_overwrite_input(tmp_path):
+    src = tmp_path / "train.json"
+    src.write_text(json.dumps(coco(["001_1_JPG.rf.a.png"])))
+    try:
+        to_mdetr.main(["--input", str(src), "--output", str(src)])
+    except SystemExit as e:
+        assert "same file" in str(e)
+    else:
+        raise AssertionError("expected SystemExit")

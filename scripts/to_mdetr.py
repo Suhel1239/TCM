@@ -14,10 +14,10 @@ MDETR (one image entry *per annotation*, with the point name as the sentence):
 Each acupoint can be written as its pinyin name or its code (yuji / LU10, ...);
 SENTENCE_MODE chooses which.
 
-Usage: set DATASET_DIR below (the folder with train/ valid/ test/, e.g. the
-output of subject_split.py) and run
+Usage: set INPUT_JSON (your original COCO json) and OUTPUT_JSON (the new file
+to create) below, then run
     python scripts/to_mdetr.py
-Every *.json inside each split folder is converted in place, unless OUTPUT_NAME is set.
+The original json is never modified.
 """
 
 from __future__ import annotations
@@ -32,8 +32,8 @@ from pathlib import Path
 # ============================================================================
 # SETTINGS - edit these and just run:  python scripts/to_mdetr.py
 # ============================================================================
-DATASET_DIR = r"path/to/your/dataset_subject_split"  # folder containing train/ valid/ test/
-OUTPUT_NAME = None     # None = overwrite each split's json; or e.g. "mdetr.json" to write a new file
+INPUT_JSON = r"path/to/original.json"     # original COCO json
+OUTPUT_JSON = r"path/to/new_mdetr.json"   # new MDETR json to create
 SENTENCE_MODE = "random"  # "random" = name or code at random, "name" = always yuji..., "code" = always LU10...
 SEED = 42
 IMAGE_ID_START = 0     # first image id in each file
@@ -49,9 +49,6 @@ ACUPOINTS = {
     "shaofu": (3, "HT8"),
 }
 # ============================================================================
-
-SPLIT_DIRS = {"train", "training", "valid", "val", "validation", "test", "testing"}
-
 
 def build_lookup(acupoints: dict) -> dict[str, tuple[int, str, str]]:
     """lowercased name or code -> (category_id, name, code)."""
@@ -132,47 +129,41 @@ def convert(data: dict, rng: random.Random, sentence_mode: str = SENTENCE_MODE,
     return {"images": images, "annotations": annotations, "info": {}, "licenses": []}, warnings
 
 
-def convert_dataset(root: Path, output_name: str | None = OUTPUT_NAME, seed: int = SEED,
-                    **kwargs) -> list[Path]:
-    rng = random.Random(seed)
-    written = []
-    split_dirs = sorted(d for d in root.iterdir() if d.is_dir() and d.name.lower() in SPLIT_DIRS)
-    if not split_dirs:
-        raise SystemExit(f"no train/valid/test folders found in {root}")
-    for split_dir in split_dirs:
-        for jp in sorted(split_dir.glob("*.json")):
-            data = json.loads(jp.read_text(encoding="utf-8"))
-            if not isinstance(data, dict) or "images" not in data or "annotations" not in data:
-                print(f"skip {jp}: not a COCO file", file=sys.stderr)
-                continue
-            if is_mdetr(data):
-                print(f"skip {jp}: already in MDETR format")
-                continue
-            out, warnings = convert(data, rng, source=str(jp), **kwargs)
-            for w in warnings:
-                print("warning:", w, file=sys.stderr)
-            dst = split_dir / output_name if output_name else jp
-            with dst.open("w", encoding="utf-8") as f:
-                json.dump(out, f, indent=2, ensure_ascii=False)
-            n_files = len({im["file_name"] for im in out["images"]})
-            print(f"{dst}: {n_files} images -> {len(out['images'])} MDETR entries")
-            written.append(dst)
-    return written
+def convert_file(src: Path, dst: Path, seed: int = SEED, rng: random.Random | None = None,
+                 **kwargs) -> Path | None:
+    """Read the COCO json `src` and write a new MDETR json `dst`."""
+    if src.resolve() == dst.resolve():
+        raise SystemExit(f"output {dst} is the same file as the input; choose a new file name")
+    data = json.loads(src.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or "images" not in data or "annotations" not in data:
+        print(f"skip {src}: not a COCO file", file=sys.stderr)
+        return None
+    if is_mdetr(data):
+        print(f"skip {src}: already in MDETR format")
+        return None
+    out, warnings = convert(data, rng or random.Random(seed), source=str(src), **kwargs)
+    for w in warnings:
+        print("warning:", w, file=sys.stderr)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    with dst.open("w", encoding="utf-8") as f:
+        json.dump(out, f, indent=2, ensure_ascii=False)
+    n_files = len({im["file_name"] for im in out["images"]})
+    print(f"{src} -> {dst}: {n_files} images, {len(out['images'])} MDETR entries")
+    return dst
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--dataset", type=Path, default=Path(DATASET_DIR),
-                    help="folder containing train/ valid/ test/ (default: DATASET_DIR)")
-    ap.add_argument("--output-name", default=OUTPUT_NAME,
-                    help="write to this file name instead of overwriting each json")
+    ap.add_argument("--input", type=Path, default=Path(INPUT_JSON), help="original COCO json (default: INPUT_JSON)")
+    ap.add_argument("--output", type=Path, default=Path(OUTPUT_JSON), help="new MDETR json (default: OUTPUT_JSON)")
     ap.add_argument("--sentence-mode", choices=["random", "name", "code"], default=SENTENCE_MODE)
     ap.add_argument("--seed", type=int, default=SEED)
     args = ap.parse_args(argv)
-    if not args.dataset.is_dir():
-        raise SystemExit(f"dataset folder not found: {args.dataset}\n"
-                         "Set DATASET_DIR at the top of scripts/to_mdetr.py (or pass --dataset).")
-    convert_dataset(args.dataset, args.output_name, args.seed, sentence_mode=args.sentence_mode)
+    if not args.input.is_file():
+        raise SystemExit(f"input json not found: {args.input}\n"
+                         "Set INPUT_JSON at the top of scripts/to_mdetr.py (or pass --input).")
+    if convert_file(args.input, args.output, args.seed, sentence_mode=args.sentence_mode) is None:
+        return 1
     return 0
 
 

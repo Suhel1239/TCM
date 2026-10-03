@@ -50,7 +50,7 @@ Tests: `python -m pytest tests`
 
 ## Convert annotations to MDETR format
 
-`scripts/to_mdetr.py` turns each split's COCO json into the MDETR format: one `images`
+`scripts/to_mdetr.py` reads a COCO json and creates a new json in the MDETR format: one `images`
 entry per acupoint with the point as `sentences`, plus matching `annotations`, `info: {}`,
 `licenses: []`.
 
@@ -61,10 +61,11 @@ entry per acupoint with the point as `sentences`, plus matching `annotations`, `
 | 2 | zhongchong | P9 |
 | 3 | shaofu | HT8 |
 
-- Set `CONVERT_TO_MDETR = True` in `scripts/subject_split.py` to convert right after splitting, **or**
-- set `DATASET_DIR` at the top of `scripts/to_mdetr.py` and run `python scripts/to_mdetr.py`.
+Set `INPUT_JSON` (your original COCO json) and `OUTPUT_JSON` (the new file to create)
+at the top of `scripts/to_mdetr.py`, then run `python scripts/to_mdetr.py`. The original
+json is never modified.
 
 `SENTENCE_MODE` picks the sentence text: `"random"` (name or code, like the original files),
-`"name"` or `"code"`. The point mapping, id start values and output file name are also
-settings at the top of the script. Files already in MDETR format are skipped, and an MDETR
-dataset can be re-split with `subject_split.py` directly.
+`"name"` or `"code"`. The point mapping and id start values are also
+settings at the top of the script. An MDETR dataset can also be re-split with
+`subject_split.py` directly.
