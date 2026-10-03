@@ -307,6 +307,7 @@ def collect_split(split: str, split_dir: Path, json_sets: dict[str, JsonAnnotati
                 csv_rows[row["filename"]] = row
     label_cols = [c for c in (csv_fields or []) if c != "filename"]
 
+    missing: dict[str, list[str]] = defaultdict(list)
     for img in sorted(p for p in split_dir.rglob("*") if p.suffix.lower() in IMAGE_EXTS):
         rel_dir = img.parent.relative_to(split_dir)
         subject, image_no = parse_filename(img.name)
@@ -334,19 +335,27 @@ def collect_split(split: str, split_dir: Path, json_sets: dict[str, JsonAnnotati
         for jname, per_image in json_data.items():
             recs = per_image.pop(img.name, None)
             if recs is None:
-                print(f"warning: {img.name} has no entry in {split_dir / json_sets[jname].out_names[split]}", file=sys.stderr)
+                missing[jname].append(img.name)
                 continue
             s.json_records[jname] = recs
             s.label = json_sets[jname].label_of(recs) or s.label
 
         samples.append(s)
 
+    n_images = len(samples)
     for jname, leftover in json_data.items():
-        n = sum(len(v) for v in leftover.values())
-        if n:
-            json_sets[jname].dropped += n
-            print(f"warning: {n} record(s) in {split_dir / json_sets[jname].out_names[split]} refer to images that do not exist "
-                  f"in {split_dir} and were dropped (e.g. {next(iter(leftover))!r})", file=sys.stderr)
+        jpath = split_dir / json_sets[jname].out_names[split]
+        no_entry = missing.get(jname, [])
+        n_listed = n_images - len(no_entry) + len(leftover)
+        print(f"{jpath}: {n_images} image files in folder, {n_listed} images listed in json, "
+              f"{n_images - len(no_entry)} matched")
+        if no_entry:
+            print(f"  WARNING: {len(no_entry)} image file(s) have NO entry in {jpath.name}; they are copied "
+                  f"but will have no annotations. e.g. {no_entry[:3]}", file=sys.stderr)
+        if leftover:
+            json_sets[jname].dropped += sum(len(v) for v in leftover.values())
+            print(f"  WARNING: {len(leftover)} image(s) listed in {jpath.name} do not exist in the folder "
+                  f"and were dropped. e.g. {list(leftover)[:3]}", file=sys.stderr)
     return samples, csv_fields
 
 

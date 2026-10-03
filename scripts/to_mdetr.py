@@ -50,6 +50,9 @@ ACUPOINTS = {
 }
 # ============================================================================
 
+IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
+
+
 def build_lookup(acupoints: dict) -> dict[str, tuple[int, str, str]]:
     """lowercased name or code -> (category_id, name, code)."""
     lookup = {}
@@ -147,8 +150,20 @@ def convert_file(src: Path, dst: Path, seed: int = SEED, rng: random.Random | No
     dst.parent.mkdir(parents=True, exist_ok=True)
     with dst.open("w", encoding="utf-8") as f:
         json.dump(out, f, indent=2, ensure_ascii=False)
+    in_files = {Path(im["file_name"].replace("\\", "/")).name for im in data["images"]}
     n_files = len({im["file_name"] for im in out["images"]})
-    print(f"{src} -> {dst}: {n_files} images, {len(out['images'])} MDETR entries")
+    print(f"{src}: {len(in_files)} images listed in the input json")
+    print(f"{dst}: {n_files} images, {len(out['images'])} MDETR entries written")
+
+    # compare with the image files sitting next to the input json
+    folder = {p.name for p in src.parent.rglob("*") if p.suffix.lower() in IMAGE_EXTS}
+    if folder:
+        not_in_json = sorted(folder - in_files)
+        print(f"{src.parent}: {len(folder)} image files in this folder")
+        if not_in_json:
+            print(f"  WARNING: {len(not_in_json)} image file(s) in the folder are NOT in {src.name}, "
+                  f"so they have no annotations. e.g. {not_in_json[:3]}\n"
+                  f"  Check that INPUT_JSON is the json from the same (new) split folder.", file=sys.stderr)
     return dst
 
 
