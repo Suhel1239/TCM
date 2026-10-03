@@ -65,6 +65,7 @@ STRATIFY = False       # True = also balance classes across splits
 SEED = 42              # change to get a different (but repeatable) split
 DRY_RUN = False        # True = only print the report, write nothing
 OVERWRITE = False      # True = delete OUTPUT_DIR first if it already exists
+ALLOW_MISSING_ANNOTATIONS = False  # False = stop if an image has no entry in its split's json
 # ============================================================================
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
@@ -495,6 +496,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--overwrite", action="store_true", default=OVERWRITE,
                     help="replace --output if it exists")
     args = ap.parse_args(argv)
+    args.allow_missing = ALLOW_MISSING_ANNOTATIONS
 
     if not args.input.is_dir():
         raise SystemExit(f"input folder not found: {args.input}\n"
@@ -519,6 +521,23 @@ def main(argv: list[str] | None = None) -> int:
         csv_fields = csv_fields or fields
     if not samples:
         raise SystemExit("no images found")
+
+    # every image should have annotations; otherwise the new json files would be incomplete
+    if json_sets:
+        unmatched = [s for s in samples if len(s.json_records) < len(json_sets)]
+        if unmatched and not args.allow_missing:
+            by_split = Counter(s.original_split for s in unmatched)
+            total = Counter(s.original_split for s in samples)
+            lines = [f"  {sp}: {by_split[sp]} of {total[sp]} images have no entry in the json"
+                     for sp in split_dirs if by_split[sp]]
+            raise SystemExit(
+                "STOPPED: some images have no annotations in their split's json file:\n"
+                + "\n".join(lines)
+                + f"\n  e.g. {[s.image.name for s in unmatched[:3]]}\n"
+                "The json probably does not belong to the images in that folder (e.g. a different\n"
+                "Roboflow export/version, so the file names differ). Compare a few file_name values\n"
+                "in that json with the real file names. Set ALLOW_MISSING_ANNOTATIONS = True to\n"
+                "continue anyway (those images are then copied without annotations).")
 
     subjects: dict[str, Subject] = {}
     for s in samples:

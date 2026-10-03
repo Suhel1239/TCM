@@ -198,3 +198,17 @@ def test_json_named_differently_per_split(tmp_path):
         assert {im["file_name"] for im in data["images"]} == {p.name for p in (out / sp).glob("*.png")}
         new_total += len(data["annotations"])
     assert new_total == total_anns
+
+
+def test_stops_when_json_does_not_match_images(tmp_path, monkeypatch):
+    src, out = tmp_path / "src", tmp_path / "out"
+    build_json_dataset(src, "coco")
+    # simulate a json from another export: rename most train images on disk
+    imgs = sorted((src / "train").glob("*.png"))
+    for p in imgs[: len(imgs) * 2 // 3]:
+        p.rename(p.with_name(p.name.replace(".rf.", ".rf.x")))
+    with pytest.raises(SystemExit, match="STOPPED"):
+        subject_split.main(["--input", str(src), "--output", str(out)])
+    assert not out.exists()
+    monkeypatch.setattr(subject_split, "ALLOW_MISSING_ANNOTATIONS", True)
+    assert subject_split.main(["--input", str(src), "--output", str(out)]) == 0
