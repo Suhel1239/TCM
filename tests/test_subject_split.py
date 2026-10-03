@@ -239,3 +239,25 @@ def test_annotations_found_in_another_splits_json(tmp_path):
         for a in data["annotations"]:
             got.setdefault(ids[a["image_id"]], []).append(a["bbox"])
     assert {k: sorted(v) for k, v in got.items()} == {k: sorted(v) for k, v in expected.items()}
+
+
+@pytest.mark.parametrize("fmt", ["coco", "dict", "list"])
+def test_json_png_but_files_are_jpg(tmp_path, fmt):
+    """json lists x.png while the file on disk is x.jpg (as in the TCM train split)."""
+    src, out = tmp_path / "src", tmp_path / "out"
+    build_json_dataset(src, fmt)
+    for p in (src / "train").glob("*.png"):
+        p.rename(p.with_suffix(".jpg"))
+    assert subject_split.main(["--input", str(src), "--output", str(out), "--ratios", "1", "1", "1"]) == 0
+    for sp in ("train", "valid", "test"):
+        data = json.loads((out / sp / "anno.json").read_text())
+        if fmt == "coco":
+            listed = {im["file_name"] for im in data["images"]}
+        elif fmt == "dict":
+            listed = set(data)
+        else:
+            listed = {r["filename"] for r in data}
+        on_disk = {p.name for p in (out / sp).iterdir() if p.suffix in (".png", ".jpg")}
+        assert listed == on_disk  # json names now match the real files
+    assert any(n.endswith(".jpg") for sp in ("train", "valid", "test") for n in
+               (p.name for p in (out / sp).iterdir()))

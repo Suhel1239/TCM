@@ -94,6 +94,7 @@ class Sample:
     csv_row: dict | None = None      # row from Roboflow _classes.csv, if any
     json_records: dict = field(default_factory=dict)  # json file name -> this image's record(s)
     json_found_in: str | None = None  # split whose json listed this image
+    json_renamed: bool = False        # json file_name was corrected to the real file name
     label: str | None = None         # class used for stratification
 
 
@@ -232,6 +233,47 @@ class JsonAnnotations:
                 mapping[c["id"]] = new_id
         return mapping
 
+    def set_file_name(self, records: list, real_name: str) -> tuple[list, bool]:
+        """Make the records point at the real image file (e.g. json says x.png, disk has x.jpg)."""
+        def fix(value):
+            if not isinstance(value, str):
+                return value, False
+            old = value.replace("\\", "/").rsplit("/", 1)
+            if old[-1] == real_name:
+                return value, False
+            return (old[0] + "/" + real_name) if len(old) == 2 else real_name, True
+
+        changed = False
+        out = []
+        for rec in records:
+            c = False
+            if self.kind == "coco":
+                img, anns = rec
+                new, c = fix(img.get("file_name"))
+                if c:
+                    img = {**img, "file_name": new}
+                out.append((img, anns))
+            elif self.kind == "dict":
+                k, v = rec
+                if isinstance(v, dict) and record_filename(v):
+                    v = dict(v)
+                    for fk in FILENAME_KEYS:
+                        if fk in v:
+                            v[fk], c = fix(v[fk])
+                            break
+                else:
+                    k, c = fix(k)  # dict keyed by file name
+                out.append((k, v))
+            else:
+                rec = dict(rec)
+                for fk in FILENAME_KEYS:
+                    if fk in rec:
+                        rec[fk], c = fix(rec[fk])
+                        break
+                out.append(rec)
+            changed |= c
+        return out, changed
+
     def label_of(self, records: list) -> str | None:
         if self.kind != "coco":
             return None
@@ -300,10 +342,11 @@ def load_all_json(split_dirs: dict[str, Path], json_sets: dict[str, JsonAnnotati
             entries = js.load(jp)
             dup = 0
             for name, recs in entries.items():
-                if name in index[key]:
+                stem = Path(name).stem  # match without extension: x.png in json == x.jpg on disk
+                if stem in index[key]:
                     dup += 1  # same image listed in two json files: keep the first
                     continue
-                index[key][name] = (split, recs)
+                index[key][stem] = (split, recs)
             print(f"{jp}: {len(entries)} images listed"
                   + (f" ({dup} already listed in another split's json, kept the first)" if dup else ""))
     return index
@@ -350,10 +393,12 @@ def collect_split(split: str, split_dir: Path, json_sets: dict[str, JsonAnnotati
                 s.label = csv_label(row, label_cols)
 
         for key, per_image in json_index.items():
-            found = per_image.pop(img.name, None)  # look in the json files of every split
+            found = per_image.pop(img.stem, None)  # look in the json files of every split
             if found is None:
                 continue
             json_split, recs = found
+            recs, renamed = json_sets[key].set_file_name(recs, img.name)
+            s.json_renamed = s.json_renamed or renamed
             s.json_records[key] = recs
             s.json_found_in = json_split
             s.label = json_sets[key].label_of(recs) or s.label
@@ -370,6 +415,10 @@ def report_json_matching(samples: list[Sample], json_sets: dict, json_index: dic
     elsewhere = [s for s in matched if s.json_found_in != s.original_split]
     unmatched = [s for s in samples if len(s.json_records) < len(json_sets)]
     print(f"Annotations: {len(matched)} of {len(samples)} images found in the json files")
+    renamed = [s for s in matched if s.json_renamed]
+    if renamed:
+        print(f"  {len(renamed)} of them had a different file name/extension in the json "
+              f"(e.g. {renamed[0].image.name}); the new json uses the real file names")
     if elsewhere:
         print(f"  {len(elsewhere)} of them were listed in another split's json (that is fine)")
     for key, leftover in json_index.items():
