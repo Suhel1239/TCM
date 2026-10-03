@@ -155,6 +155,7 @@ class JsonAnnotations:
 
     def __init__(self, name: str):
         self.name = name
+        self.out_names: dict[str, str] = {}  # canonical split -> file name to write (default: name)
         self.kind: str | None = None      # "coco" | "dict" | "list" | "wrapped_list"
         self.template: dict | None = None  # top-level keys other than the per-image data
         self.list_key: str | None = None   # for "wrapped_list"
@@ -266,15 +267,30 @@ class JsonAnnotations:
             json.dump(self.build(records), f, indent=self.indent, ensure_ascii=False)
 
 
-def collect_split(split: str, split_dir: Path,
-                  json_sets: dict[str, JsonAnnotations]) -> tuple[list[Sample], list[str] | None]:
+def json_set_key(split_dirs: dict[str, Path]) -> dict[Path, str]:
+    """Decide which JSON files across the splits belong to the same annotation set.
+
+    If every split folder has exactly one JSON file they are treated as one set,
+    even if named differently (train/train.json, valid/val.json, test/test.json).
+    Otherwise files are matched by name (e.g. anno.json in every split).
+    """
+    per_split = {sp: sorted(d.glob("*.json")) for sp, d in split_dirs.items()}
+    if per_split and all(len(v) == 1 for v in per_split.values()):
+        return {v[0]: "annotations" for v in per_split.values()}
+    return {p: p.name for v in per_split.values() for p in v}
+
+
+def collect_split(split: str, split_dir: Path, json_sets: dict[str, JsonAnnotations],
+                  json_keys: dict[Path, str]) -> tuple[list[Sample], list[str] | None]:
     samples: list[Sample] = []
 
     # JSON annotation files directly inside the split folder (anno.json, _annotations.coco.json, ...)
     json_data: dict[str, dict[str, list]] = {}
     for jp in sorted(split_dir.glob("*.json")):
-        js = json_sets.setdefault(jp.name, JsonAnnotations(jp.name))
-        json_data[jp.name] = js.load(jp)
+        key = json_keys[jp]
+        js = json_sets.setdefault(key, JsonAnnotations(jp.name))
+        js.out_names[split] = jp.name
+        json_data[key] = js.load(jp)
 
     csv_path = split_dir / "_classes.csv"
     csv_rows: dict[str, dict] = {}
@@ -315,7 +331,7 @@ def collect_split(split: str, split_dir: Path,
         for jname, per_image in json_data.items():
             recs = per_image.pop(img.name, None)
             if recs is None:
-                print(f"warning: {img.name} has no entry in {split_dir / jname}", file=sys.stderr)
+                print(f"warning: {img.name} has no entry in {split_dir / json_sets[jname].out_names[split]}", file=sys.stderr)
                 continue
             s.json_records[jname] = recs
             s.label = json_sets[jname].label_of(recs) or s.label
@@ -326,7 +342,7 @@ def collect_split(split: str, split_dir: Path,
         n = sum(len(v) for v in leftover.values())
         if n:
             json_sets[jname].dropped += n
-            print(f"warning: {n} record(s) in {split_dir / jname} refer to images that do not exist "
+            print(f"warning: {n} record(s) in {split_dir / json_sets[jname].out_names[split]} refer to images that do not exist "
                   f"in {split_dir} and were dropped (e.g. {next(iter(leftover))!r})", file=sys.stderr)
     return samples, csv_fields
 
@@ -402,10 +418,10 @@ def write_output(in_root: Path, out_root: Path, dir_names: dict[str, str], assig
                 w.writeheader()
                 w.writerows(sorted(rows, key=lambda r: r["filename"]))
 
-    for jname, js in json_sets.items():
-        for split in dir_names.values():
+    for jkey, js in json_sets.items():
+        for canon, split in dir_names.items():
             (out_root / split).mkdir(parents=True, exist_ok=True)
-            js.write(out_root / split / jname, json_out.get((split, jname), []))
+            js.write(out_root / split / js.out_names.get(canon, js.name), json_out.get((split, jkey), []))
 
     with (out_root / "split_manifest.csv").open("w", newline="") as f:
         w = csv.writer(f)
@@ -484,8 +500,9 @@ def main(argv: list[str] | None = None) -> int:
     samples: list[Sample] = []
     csv_fields: list[str] | None = None
     json_sets: dict[str, JsonAnnotations] = {}
+    json_keys = json_set_key(split_dirs)
     for split, d in split_dirs.items():
-        ss, fields = collect_split(split, d, json_sets)
+        ss, fields = collect_split(split, d, json_sets, json_keys)
         samples += ss
         csv_fields = csv_fields or fields
     if not samples:
@@ -526,8 +543,9 @@ def main(argv: list[str] | None = None) -> int:
     dir_names = {sp: split_dirs[sp].name if sp in split_dirs else sp for sp in splits}
     write_output(in_root, out_root, dir_names, assignment, samples, csv_fields, json_sets, args.overwrite)
     print(f"\nNew dataset written to {out_root}")
-    for jname, js in json_sets.items():
-        print(f"Annotations ({js.kind} format) re-split into <split>/{jname}")
+    for js in json_sets.values():
+        names = ", ".join(f"{dir_names[sp]}/{js.out_names.get(sp, js.name)}" for sp in splits)
+        print(f"Annotations ({js.kind} format) re-split into: {names}")
     print(f"Per-image assignment saved to {out_root / 'split_manifest.csv'}")
     return 0
 

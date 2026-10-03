@@ -179,3 +179,22 @@ def test_json_annotations_resplit(tmp_path, fmt):
         return res
 
     assert per_image(out) == per_image(src)
+
+
+def test_json_named_differently_per_split(tmp_path):
+    """train/train.json, valid/val.json, test/test.json -> one json per split, names kept."""
+    src, out = tmp_path / "src", tmp_path / "out"
+    build_json_dataset(src, "coco")
+    names = {"train": "train.json", "valid": "val.json", "test": "test.json"}
+    for sp, n in names.items():
+        (src / sp / "anno.json").rename(src / sp / n)
+    total_anns = sum(len(json.loads((src / sp / n).read_text())["annotations"]) for sp, n in names.items())
+
+    assert subject_split.main(["--input", str(src), "--output", str(out)]) == 0
+    new_total = 0
+    for sp, n in names.items():
+        assert sorted(p.name for p in (out / sp).glob("*.json")) == [n]
+        data = json.loads((out / sp / n).read_text())
+        assert {im["file_name"] for im in data["images"]} == {p.name for p in (out / sp).glob("*.png")}
+        new_total += len(data["annotations"])
+    assert new_total == total_anns

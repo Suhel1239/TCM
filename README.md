@@ -34,8 +34,8 @@ python scripts/subject_split.py --input path/to/dataset --output out --dry-run
 class folders (`train/<class>/img.png`), YOLO (`train/images` + `train/labels`), Roboflow
 `_classes.csv`, JSON annotation files (e.g. `train/anno.json`), or a flat folder.
 
-**JSON annotations:** any `*.json` in a split folder (e.g. `anno.json`) is re-split along
-with the images, and each new split gets a file with the same name and format containing
+**JSON annotations:** the `*.json` in each split folder (e.g. `anno.json`, or `train.json` / `val.json` / `test.json`) is re-split along
+with the images, and each new split gets one file with the same name and format containing
 only its images. Supported formats: COCO (`images` / `annotations` / `categories` — image
 and annotation ids are renumbered per split, categories and `info`/`licenses` are kept),
 a dict keyed by image filename, or a list of records with a `filename` / `file_name` field. The input is never modified. The output contains the new
