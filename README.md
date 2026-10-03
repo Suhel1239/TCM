@@ -36,7 +36,8 @@ class folders (`train/<class>/img.png`), YOLO (`train/images` + `train/labels`),
 
 **JSON annotations:** the `*.json` in each split folder (e.g. `anno.json`, or `train.json` / `val.json` / `test.json`) is re-split along
 with the images, and each new split gets one file with the same name and format containing
-only its images. Supported formats: COCO (`images` / `annotations` / `categories` — image
+only its images. Annotations are looked up in the json files of **all** splits, so an
+image still gets its annotations if they were listed in a different split's json. Supported formats: COCO (`images` / `annotations` / `categories` — image
 and annotation ids are renumbered per split, categories and `info`/`licenses` are kept),
 a dict keyed by image filename, or a list of records with a `filename` / `file_name` field. The input is never modified. The output contains the new
 splits, any top-level files (e.g. `data.yaml`), and `split_manifest.csv` listing every

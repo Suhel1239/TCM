@@ -212,3 +212,30 @@ def test_stops_when_json_does_not_match_images(tmp_path, monkeypatch):
     assert not out.exists()
     monkeypatch.setattr(subject_split, "ALLOW_MISSING_ANNOTATIONS", True)
     assert subject_split.main(["--input", str(src), "--output", str(out)]) == 0
+
+
+def test_annotations_found_in_another_splits_json(tmp_path):
+    """Images whose annotations are in a different split's json still get them."""
+    src, out = tmp_path / "src", tmp_path / "out"
+    build_json_dataset(src, "coco")
+    # move half of the train images into valid/test folders without touching the json files
+    imgs = sorted((src / "train").glob("*.png"))
+    for i, p in enumerate(imgs[: len(imgs) // 2]):
+        p.rename(src / ("valid" if i % 2 else "test") / p.name)
+    expected = {}
+    for sp in ("train", "valid", "test"):
+        data = json.loads((src / sp / "anno.json").read_text())
+        ids = {im["id"]: im["file_name"] for im in data["images"]}
+        for a in data["annotations"]:
+            expected.setdefault(ids[a["image_id"]], []).append(a["bbox"])
+
+    assert subject_split.main(["--input", str(src), "--output", str(out), "--ratios", "1", "1", "1"]) == 0
+    got = {}
+    for sp in ("train", "valid", "test"):
+        data = json.loads((out / sp / "anno.json").read_text())
+        names = {im["file_name"] for im in data["images"]}
+        assert names == {p.name for p in (out / sp).glob("*.png")}  # every image has its annotations
+        ids = {im["id"]: im["file_name"] for im in data["images"]}
+        for a in data["annotations"]:
+            got.setdefault(ids[a["image_id"]], []).append(a["bbox"])
+    assert {k: sorted(v) for k, v in got.items()} == {k: sorted(v) for k, v in expected.items()}

@@ -93,6 +93,7 @@ class Sample:
     label_file: Path | None = None   # YOLO .txt next to it, if any
     csv_row: dict | None = None      # row from Roboflow _classes.csv, if any
     json_records: dict = field(default_factory=dict)  # json file name -> this image's record(s)
+    json_found_in: str | None = None  # split whose json listed this image
     label: str | None = None         # class used for stratification
 
 
@@ -284,17 +285,33 @@ def json_set_key(split_dirs: dict[str, Path]) -> dict[Path, str]:
     return {p: p.name for v in per_split.values() for p in v}
 
 
-def collect_split(split: str, split_dir: Path, json_sets: dict[str, JsonAnnotations],
-                  json_keys: dict[Path, str]) -> tuple[list[Sample], list[str] | None]:
-    samples: list[Sample] = []
+def load_all_json(split_dirs: dict[str, Path], json_sets: dict[str, JsonAnnotations],
+                  json_keys: dict[Path, str]) -> dict[str, dict[str, tuple[str, list]]]:
+    """Read the JSON annotation files of ALL splits into one index per annotation set:
+    {set key: {image file name: (split whose json listed it, records)}}.
 
-    # JSON annotation files directly inside the split folder (anno.json, _annotations.coco.json, ...)
-    json_data: dict[str, dict[str, list]] = {}
-    for jp in sorted(split_dir.glob("*.json")):
-        key = json_keys[jp]
-        js = json_sets.setdefault(key, JsonAnnotations(jp.name))
-        js.out_names[split] = jp.name
-        json_data[key] = js.load(jp)
+    An image's annotations are then found whichever split's json they were in."""
+    index: dict[str, dict[str, tuple[str, list]]] = defaultdict(dict)
+    for split, split_dir in split_dirs.items():
+        for jp in sorted(split_dir.glob("*.json")):
+            key = json_keys[jp]
+            js = json_sets.setdefault(key, JsonAnnotations(jp.name))
+            js.out_names[split] = jp.name
+            entries = js.load(jp)
+            dup = 0
+            for name, recs in entries.items():
+                if name in index[key]:
+                    dup += 1  # same image listed in two json files: keep the first
+                    continue
+                index[key][name] = (split, recs)
+            print(f"{jp}: {len(entries)} images listed"
+                  + (f" ({dup} already listed in another split's json, kept the first)" if dup else ""))
+    return index
+
+
+def collect_split(split: str, split_dir: Path, json_sets: dict[str, JsonAnnotations],
+                  json_index: dict[str, dict[str, tuple[str, list]]]) -> tuple[list[Sample], list[str] | None]:
+    samples: list[Sample] = []
 
     csv_path = split_dir / "_classes.csv"
     csv_rows: dict[str, dict] = {}
@@ -308,7 +325,6 @@ def collect_split(split: str, split_dir: Path, json_sets: dict[str, JsonAnnotati
                 csv_rows[row["filename"]] = row
     label_cols = [c for c in (csv_fields or []) if c != "filename"]
 
-    missing: dict[str, list[str]] = defaultdict(list)
     for img in sorted(p for p in split_dir.rglob("*") if p.suffix.lower() in IMAGE_EXTS):
         rel_dir = img.parent.relative_to(split_dir)
         subject, image_no = parse_filename(img.name)
@@ -333,31 +349,35 @@ def collect_split(split: str, split_dir: Path, json_sets: dict[str, JsonAnnotati
                 s.csv_row = row
                 s.label = csv_label(row, label_cols)
 
-        for jname, per_image in json_data.items():
-            recs = per_image.pop(img.name, None)
-            if recs is None:
-                missing[jname].append(img.name)
+        for key, per_image in json_index.items():
+            found = per_image.pop(img.name, None)  # look in the json files of every split
+            if found is None:
                 continue
-            s.json_records[jname] = recs
-            s.label = json_sets[jname].label_of(recs) or s.label
+            json_split, recs = found
+            s.json_records[key] = recs
+            s.json_found_in = json_split
+            s.label = json_sets[key].label_of(recs) or s.label
 
         samples.append(s)
-
-    n_images = len(samples)
-    for jname, leftover in json_data.items():
-        jpath = split_dir / json_sets[jname].out_names[split]
-        no_entry = missing.get(jname, [])
-        n_listed = n_images - len(no_entry) + len(leftover)
-        print(f"{jpath}: {n_images} image files in folder, {n_listed} images listed in json, "
-              f"{n_images - len(no_entry)} matched")
-        if no_entry:
-            print(f"  WARNING: {len(no_entry)} image file(s) have NO entry in {jpath.name}; they are copied "
-                  f"but will have no annotations. e.g. {no_entry[:3]}", file=sys.stderr)
-        if leftover:
-            json_sets[jname].dropped += sum(len(v) for v in leftover.values())
-            print(f"  WARNING: {len(leftover)} image(s) listed in {jpath.name} do not exist in the folder "
-                  f"and were dropped. e.g. {list(leftover)[:3]}", file=sys.stderr)
     return samples, csv_fields
+
+
+def report_json_matching(samples: list[Sample], json_sets: dict, json_index: dict) -> list[Sample]:
+    """Print how images were matched to annotations; return the images without any."""
+    if not json_sets:
+        return []
+    matched = [s for s in samples if len(s.json_records) == len(json_sets)]
+    elsewhere = [s for s in matched if s.json_found_in != s.original_split]
+    unmatched = [s for s in samples if len(s.json_records) < len(json_sets)]
+    print(f"Annotations: {len(matched)} of {len(samples)} images found in the json files")
+    if elsewhere:
+        print(f"  {len(elsewhere)} of them were listed in another split's json (that is fine)")
+    for key, leftover in json_index.items():
+        if leftover:
+            json_sets[key].dropped += sum(len(r) for _, r in leftover.values())
+            print(f"  WARNING: {len(leftover)} image(s) listed in the json files do not exist in any split "
+                  f"folder and were dropped. e.g. {list(leftover)[:3]}", file=sys.stderr)
+    return unmatched
 
 
 def compute_targets(total: int, weights: list[float]) -> list[int]:
@@ -514,9 +534,9 @@ def main(argv: list[str] | None = None) -> int:
     samples: list[Sample] = []
     csv_fields: list[str] | None = None
     json_sets: dict[str, JsonAnnotations] = {}
-    json_keys = json_set_key(split_dirs)
+    json_index = load_all_json(split_dirs, json_sets, json_set_key(split_dirs))
     for split, d in split_dirs.items():
-        ss, fields = collect_split(split, d, json_sets, json_keys)
+        ss, fields = collect_split(split, d, json_sets, json_index)
         samples += ss
         csv_fields = csv_fields or fields
     if not samples:
@@ -524,14 +544,14 @@ def main(argv: list[str] | None = None) -> int:
 
     # every image should have annotations; otherwise the new json files would be incomplete
     if json_sets:
-        unmatched = [s for s in samples if len(s.json_records) < len(json_sets)]
+        unmatched = report_json_matching(samples, json_sets, json_index)
         if unmatched and not args.allow_missing:
             by_split = Counter(s.original_split for s in unmatched)
             total = Counter(s.original_split for s in samples)
-            lines = [f"  {sp}: {by_split[sp]} of {total[sp]} images have no entry in the json"
+            lines = [f"  {sp}: {by_split[sp]} of {total[sp]} images are not listed in ANY json file"
                      for sp in split_dirs if by_split[sp]]
             raise SystemExit(
-                "STOPPED: some images have no annotations in their split's json file:\n"
+                "STOPPED: some images have no annotations in any of the json files:\n"
                 + "\n".join(lines)
                 + f"\n  e.g. {[s.image.name for s in unmatched[:3]]}\n"
                 "The json probably does not belong to the images in that folder (e.g. a different\n"
