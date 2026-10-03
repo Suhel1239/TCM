@@ -17,6 +17,12 @@ Supported input layouts (detected automatically, per split folder):
   * classification folders   <split>/<class_name>/<image>
   * YOLO detection/segment.  <split>/images/<image> + <split>/labels/<stem>.txt
   * Roboflow CSV labels      <split>/_classes.csv (column "filename") + images
+  * JSON annotation files    <split>/anno.json (or any *.json in the split folder)
+                             - COCO format (images / annotations / categories)
+                             - dict keyed by image filename
+                             - list of records with a filename field
+                             Each new split gets a JSON file with the same name and format,
+                             containing only that split's images.
   * flat folder of images    <split>/<image>
 
 By default the new splits get the same number of images as the original ones
@@ -37,7 +43,9 @@ Command-line flags override the settings, e.g.:
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
+import json
 import random
 import re
 import shutil
@@ -83,6 +91,7 @@ class Sample:
     original_split: str
     label_file: Path | None = None   # YOLO .txt next to it, if any
     csv_row: dict | None = None      # row from Roboflow _classes.csv, if any
+    json_records: dict = field(default_factory=dict)  # json file name -> this image's record(s)
     label: str | None = None         # class used for stratification
 
 
@@ -125,8 +134,147 @@ def csv_label(row: dict, columns: list[str]) -> str | None:
     return "+".join(active) if active else None
 
 
-def collect_split(split: str, split_dir: Path) -> tuple[list[Sample], list[str] | None]:
+FILENAME_KEYS = ("file_name", "filename", "image", "image_name", "img", "image_path", "path", "name")
+
+
+def record_filename(rec) -> str | None:
+    if isinstance(rec, dict):
+        for k in FILENAME_KEYS:
+            v = rec.get(k)
+            if isinstance(v, str) and v:
+                return Path(v.replace("\\", "/")).name
+    return None
+
+
+class JsonAnnotations:
+    """One annotation file name (e.g. "anno.json") across all splits.
+
+    Records are collected per image so they can be regrouped into the new splits
+    and written back in the same format as the original file.
+    """
+
+    def __init__(self, name: str):
+        self.name = name
+        self.kind: str | None = None      # "coco" | "dict" | "list" | "wrapped_list"
+        self.template: dict | None = None  # top-level keys other than the per-image data
+        self.list_key: str | None = None   # for "wrapped_list"
+        self.indent: int | None = 2
+        self.categories: list[dict] = []   # coco: unified category list
+        self.cat_by_name: dict[str, int] = {}
+        self.dropped = 0                   # records whose image file was not found
+
+    @staticmethod
+    def detect(data) -> tuple[str, str | None]:
+        if isinstance(data, dict) and isinstance(data.get("images"), list):
+            return "coco", None
+        if isinstance(data, list):
+            return "list", None
+        if isinstance(data, dict):
+            for k, v in data.items():
+                if isinstance(v, list) and v and all(record_filename(r) for r in v):
+                    return "wrapped_list", k
+            return "dict", None
+        raise SystemExit("unrecognised JSON annotation format")
+
+    def load(self, path: Path) -> dict[str, list]:
+        """Return {image basename: [records]} for one split's file."""
+        text = path.read_text(encoding="utf-8")
+        data = json.loads(text)
+        kind, list_key = self.detect(data)
+        if self.kind is None:
+            self.kind, self.list_key = kind, list_key
+            self.indent = 2 if "\n" in text.strip() else None
+            if isinstance(data, dict) and kind != "dict":
+                drop = {"images", "annotations", "categories"} if kind == "coco" else {list_key}
+                self.template = {k: v for k, v in data.items() if k not in drop}
+        elif kind != self.kind:
+            raise SystemExit(f"{path}: format {kind!r} differs from the other splits ({self.kind!r})")
+
+        out: dict[str, list] = defaultdict(list)
+        if kind == "coco":
+            cat_map = self._merge_categories(data.get("categories", []), path)
+            anns_by_img = defaultdict(list)
+            for a in data.get("annotations", []):
+                a = dict(a)
+                if "category_id" in a:
+                    a["category_id"] = cat_map.get(a["category_id"], a["category_id"])
+                anns_by_img[a["image_id"]].append(a)
+            for img in data["images"]:
+                out[Path(img["file_name"].replace("\\", "/")).name].append((img, anns_by_img.get(img["id"], [])))
+        elif kind == "dict":
+            for k, v in data.items():
+                out[record_filename(v) or Path(k.replace("\\", "/")).name].append((k, v))
+        else:
+            items = data if kind == "list" else data[list_key]
+            for r in items:
+                out[record_filename(r)].append(r)
+        return out
+
+    def _merge_categories(self, cats: list[dict], path: Path) -> dict[int, int]:
+        mapping = {}
+        if not self.categories:
+            self.categories = [dict(c) for c in cats]
+            self.cat_by_name = {c["name"]: c["id"] for c in self.categories}
+            return {c["id"]: c["id"] for c in cats}
+        for c in cats:
+            if c["name"] in self.cat_by_name:
+                mapping[c["id"]] = self.cat_by_name[c["name"]]
+            else:
+                new_id = max((x["id"] for x in self.categories), default=-1) + 1
+                print(f"note: category {c['name']!r} only in {path}, added with id {new_id}", file=sys.stderr)
+                self.categories.append({**c, "id": new_id})
+                self.cat_by_name[c["name"]] = new_id
+                mapping[c["id"]] = new_id
+        return mapping
+
+    def label_of(self, records: list) -> str | None:
+        if self.kind != "coco":
+            return None
+        names = {c["id"]: c["name"] for c in self.categories}
+        cats = sorted({names.get(a.get("category_id"), str(a.get("category_id")))
+                       for _, anns in records for a in anns if "category_id" in a})
+        return "+".join(cats) if cats else None
+
+    def build(self, records: list) -> object:
+        """Assemble one output file from the records of the images in a split."""
+        if self.kind == "coco":
+            images, annotations = [], []
+            for new_img_id, (img, anns) in enumerate(records):
+                img = copy.deepcopy(img)
+                img["id"] = new_img_id
+                images.append(img)
+                for a in anns:
+                    a = copy.deepcopy(a)
+                    a["id"] = len(annotations)
+                    a["image_id"] = new_img_id
+                    annotations.append(a)
+            out = copy.deepcopy(self.template) if self.template else {}
+            out["images"] = images
+            out["annotations"] = annotations
+            out["categories"] = copy.deepcopy(self.categories)
+            return out
+        if self.kind == "dict":
+            return {k: v for k, v in records}
+        if self.kind == "list":
+            return list(records)
+        out = copy.deepcopy(self.template) if self.template else {}
+        out[self.list_key] = list(records)
+        return out
+
+    def write(self, path: Path, records: list) -> None:
+        with path.open("w", encoding="utf-8") as f:
+            json.dump(self.build(records), f, indent=self.indent, ensure_ascii=False)
+
+
+def collect_split(split: str, split_dir: Path,
+                  json_sets: dict[str, JsonAnnotations]) -> tuple[list[Sample], list[str] | None]:
     samples: list[Sample] = []
+
+    # JSON annotation files directly inside the split folder (anno.json, _annotations.coco.json, ...)
+    json_data: dict[str, dict[str, list]] = {}
+    for jp in sorted(split_dir.glob("*.json")):
+        js = json_sets.setdefault(jp.name, JsonAnnotations(jp.name))
+        json_data[jp.name] = js.load(jp)
 
     csv_path = split_dir / "_classes.csv"
     csv_rows: dict[str, dict] = {}
@@ -139,12 +287,6 @@ def collect_split(split: str, split_dir: Path) -> tuple[list[Sample], list[str] 
                 row = {k.strip(): v.strip() for k, v in row.items()}
                 csv_rows[row["filename"]] = row
     label_cols = [c for c in (csv_fields or []) if c != "filename"]
-
-    if (split_dir / "_annotations.coco.json").exists():
-        raise SystemExit(
-            f"{split_dir}: COCO json annotations are not supported by this script. "
-            "Export the dataset from Roboflow in folder / YOLO / CSV format instead."
-        )
 
     for img in sorted(p for p in split_dir.rglob("*") if p.suffix.lower() in IMAGE_EXTS):
         rel_dir = img.parent.relative_to(split_dir)
@@ -170,7 +312,22 @@ def collect_split(split: str, split_dir: Path) -> tuple[list[Sample], list[str] 
                 s.csv_row = row
                 s.label = csv_label(row, label_cols)
 
+        for jname, per_image in json_data.items():
+            recs = per_image.pop(img.name, None)
+            if recs is None:
+                print(f"warning: {img.name} has no entry in {split_dir / jname}", file=sys.stderr)
+                continue
+            s.json_records[jname] = recs
+            s.label = json_sets[jname].label_of(recs) or s.label
+
         samples.append(s)
+
+    for jname, leftover in json_data.items():
+        n = sum(len(v) for v in leftover.values())
+        if n:
+            json_sets[jname].dropped += n
+            print(f"warning: {n} record(s) in {split_dir / jname} refer to images that do not exist "
+                  f"in {split_dir} and were dropped (e.g. {next(iter(leftover))!r})", file=sys.stderr)
     return samples, csv_fields
 
 
@@ -202,7 +359,8 @@ def assign_subjects(subjects: list[Subject], targets: list[int], rng: random.Ran
 
 
 def write_output(in_root: Path, out_root: Path, dir_names: dict[str, str], assignment: dict[str, str],
-                 samples: list[Sample], csv_fields: list[str] | None, overwrite: bool) -> None:
+                 samples: list[Sample], csv_fields: list[str] | None,
+                 json_sets: dict[str, JsonAnnotations], overwrite: bool) -> None:
     if out_root.exists():
         if not overwrite:
             raise SystemExit(f"{out_root} already exists (use --overwrite to replace it)")
@@ -215,6 +373,7 @@ def write_output(in_root: Path, out_root: Path, dir_names: dict[str, str], assig
             shutil.copy2(f, out_root / f.name)
 
     csv_out: dict[str, list[dict]] = defaultdict(list)
+    json_out: dict[tuple[str, str], list] = defaultdict(list)
     used_names: dict[str, set[Path]] = defaultdict(set)
     for s in samples:
         split = dir_names[assignment[s.subject]]
@@ -231,6 +390,8 @@ def write_output(in_root: Path, out_root: Path, dir_names: dict[str, str], assig
             shutil.copy2(s.label_file, lbl_dir / s.label_file.name)
         if s.csv_row is not None:
             csv_out[split].append(s.csv_row)
+        for jname, recs in s.json_records.items():
+            json_out[(split, jname)].extend(recs)
 
     if csv_fields:
         for split in dir_names.values():
@@ -240,6 +401,11 @@ def write_output(in_root: Path, out_root: Path, dir_names: dict[str, str], assig
                 w = csv.DictWriter(f, fieldnames=csv_fields)
                 w.writeheader()
                 w.writerows(sorted(rows, key=lambda r: r["filename"]))
+
+    for jname, js in json_sets.items():
+        for split in dir_names.values():
+            (out_root / split).mkdir(parents=True, exist_ok=True)
+            js.write(out_root / split / jname, json_out.get((split, jname), []))
 
     with (out_root / "split_manifest.csv").open("w", newline="") as f:
         w = csv.writer(f)
@@ -317,8 +483,9 @@ def main(argv: list[str] | None = None) -> int:
 
     samples: list[Sample] = []
     csv_fields: list[str] | None = None
+    json_sets: dict[str, JsonAnnotations] = {}
     for split, d in split_dirs.items():
-        ss, fields = collect_split(split, d)
+        ss, fields = collect_split(split, d, json_sets)
         samples += ss
         csv_fields = csv_fields or fields
     if not samples:
@@ -357,8 +524,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     # reuse the original folder names (e.g. "val" stays "val") so data.yaml paths keep working
     dir_names = {sp: split_dirs[sp].name if sp in split_dirs else sp for sp in splits}
-    write_output(in_root, out_root, dir_names, assignment, samples, csv_fields, args.overwrite)
+    write_output(in_root, out_root, dir_names, assignment, samples, csv_fields, json_sets, args.overwrite)
     print(f"\nNew dataset written to {out_root}")
+    for jname, js in json_sets.items():
+        print(f"Annotations ({js.kind} format) re-split into <split>/{jname}")
     print(f"Per-image assignment saved to {out_root / 'split_manifest.csv'}")
     return 0
 

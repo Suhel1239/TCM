@@ -1,4 +1,5 @@
 import csv
+import json
 import random
 import sys
 from collections import Counter, defaultdict
@@ -113,3 +114,68 @@ def test_refuses_existing_output(tmp_path):
     out.mkdir()
     with pytest.raises(SystemExit):
         subject_split.main(["--input", str(src), "--output", str(out)])
+
+
+def build_json_dataset(root: Path, fmt: str, n_subjects: int = 40, per_subject: int = 7):
+    """Each split folder holds images + anno.json in the given format (leaky split)."""
+    rng = random.Random(1)
+    splits = ["train"] * 70 + ["valid"] * 20 + ["test"] * 10
+    per_split = defaultdict(list)
+    for sid in range(1, n_subjects + 1):
+        cat = 1 if sid % 2 else 2
+        for k in range(1, per_subject + 1):
+            split = rng.choice(splits)
+            name = make_name(sid, k)
+            (root / split).mkdir(parents=True, exist_ok=True)
+            (root / split / name).write_bytes(b"x")
+            per_split[split].append((name, cat))
+    for split, items in per_split.items():
+        if fmt == "coco":
+            data = {"info": {"description": "tcm"},
+                    "categories": [{"id": 0, "name": "tongue"}, {"id": 1, "name": "A"}, {"id": 2, "name": "B"}],
+                    "images": [], "annotations": []}
+            for i, (name, cat) in enumerate(items):
+                data["images"].append({"id": i, "file_name": name, "width": 10, "height": 10})
+                for j in range(2):  # two annotations per image
+                    data["annotations"].append({"id": len(data["annotations"]), "image_id": i,
+                                                "category_id": cat, "bbox": [j, 0, 1, 1]})
+        elif fmt == "dict":
+            data = {name: {"label": cat} for name, cat in items}
+        else:
+            data = [{"filename": name, "label": cat} for name, cat in items]
+        (root / split / "anno.json").write_text(json.dumps(data, indent=2))
+
+
+@pytest.mark.parametrize("fmt", ["coco", "dict", "list"])
+def test_json_annotations_resplit(tmp_path, fmt):
+    src, out = tmp_path / "src", tmp_path / "out"
+    build_json_dataset(src, fmt)
+    assert subject_split.main(["--input", str(src), "--output", str(out), "--stratify"]) == 0
+
+    by_split = subjects_by_split(out)
+    assert not (by_split["train"] & by_split["valid"] or by_split["train"] & by_split["test"]
+                or by_split["valid"] & by_split["test"])
+
+    # gather original per-image annotation content to compare against
+    def per_image(root):
+        res = {}
+        for sp in ("train", "valid", "test"):
+            data = json.loads((root / sp / "anno.json").read_text())
+            if fmt == "coco":
+                assert [im["id"] for im in data["images"]] == list(range(len(data["images"])))
+                assert len({a["id"] for a in data["annotations"]}) == len(data["annotations"])
+                ids = {im["id"]: im["file_name"] for im in data["images"]}
+                for a in data["annotations"]:
+                    res.setdefault(ids[a["image_id"]], []).append((a["category_id"], a["bbox"]))
+                assert data["info"] == {"description": "tcm"}
+                assert len(data["categories"]) == 3
+            elif fmt == "dict":
+                res.update({k: v for k, v in data.items()})
+            else:
+                res.update({r["filename"]: r for r in data})
+            listed = set(ids.values()) if fmt == "coco" else (set(data) if fmt == "dict"
+                                                              else {r["filename"] for r in data})
+            assert listed == {p.name for p in (root / sp).glob("*.png")}
+        return res
+
+    assert per_image(out) == per_image(src)

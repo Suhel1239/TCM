@@ -32,7 +32,13 @@ python scripts/subject_split.py --input path/to/dataset --output out --dry-run
 
 `--input` must contain `train/`, `valid/` (or `val/`) and `test/` folders. Supported layouts:
 class folders (`train/<class>/img.png`), YOLO (`train/images` + `train/labels`), Roboflow
-`_classes.csv`, or a flat folder. The input is never modified. The output contains the new
+`_classes.csv`, JSON annotation files (e.g. `train/anno.json`), or a flat folder.
+
+**JSON annotations:** any `*.json` in a split folder (e.g. `anno.json`) is re-split along
+with the images, and each new split gets a file with the same name and format containing
+only its images. Supported formats: COCO (`images` / `annotations` / `categories` — image
+and annotation ids are renumbered per split, categories and `info`/`licenses` are kept),
+a dict keyed by image filename, or a list of records with a `filename` / `file_name` field. The input is never modified. The output contains the new
 splits, any top-level files (e.g. `data.yaml`), and `split_manifest.csv` listing every
 image's subject, old split and new split. The printed report confirms 0 subject overlap
 between splits.
