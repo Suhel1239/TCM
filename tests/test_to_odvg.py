@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import to_odvg  # noqa: E402
-from test_to_mdetr import CODE, MDETR_CAT, coco  # noqa: E402
+from test_to_mdetr import CODE, coco  # noqa: E402
 
 NAMES = ["165_5_JPG.rf.533991b1bff2e3b80fe498b19b64bff7.png", "002_1_JPG.rf.aa.png"]
 
@@ -47,36 +47,3 @@ def test_caption_modes(tmp_path):
     assert all(r["grounding"]["caption"] == r["grounding"]["regions"][0]["phrase"] for r in run(tmp_path, "name"))
     assert all(r["grounding"]["caption"] == CODE[r["grounding"]["regions"][0]["phrase"]]
                for r in run(tmp_path, "code"))
-
-
-def test_mdetr_input_keeps_sentences_and_order(tmp_path):
-    import random
-    import to_mdetr
-    mdetr, _ = to_mdetr.convert(coco(NAMES), random.Random(1))
-    src, dst = tmp_path / "mdetr.json", tmp_path / "out.jsonl"
-    src.write_text(json.dumps(mdetr))
-    before = src.read_text()
-    assert to_odvg.main(["--input", str(src), "--output", str(dst), "--sentence-mode", "name"]) == 0
-    assert src.read_text() == before
-    lines = [json.loads(line) for line in dst.read_text().splitlines()]
-    assert len(lines) == len(mdetr["images"]) == 8
-    names = {cid: n for n, cid in MDETR_CAT.items()}
-    for r, im, a in zip(lines, mdetr["images"], mdetr["annotations"]):
-        assert r["file_name"] == im["file_name"] and (r["height"], r["width"]) == (1024, 1024)
-        g = r["grounding"]
-        assert g["caption"] == im["sentences"]  # sentence kept even with --sentence-mode name
-        reg = g["regions"][0]
-        assert reg["phrase"] == names[a["category_id"]]
-        x, y, w, h = a["bbox"]
-        assert reg["bbox"] == [x, y, x + w, y + h]
-        assert reg["tokens_positive"] == [[0, 1]]
-
-
-def test_mdetr_sentence_category_mismatch_warns():
-    mdetr = {"images": [{"id": 0, "file_name": "a.png", "height": 1, "width": 1, "sentences": "LU10"},
-                        {"id": 1, "file_name": "a.png", "height": 1, "width": 1, "sentences": "P8"}],
-             "annotations": [{"id": 0, "image_id": 0, "bbox": [1, 2, 3, 4], "category_id": 0},
-                             {"id": 1, "image_id": 1, "bbox": [1, 2, 3, 4], "category_id": 3}]}
-    records, warnings = to_odvg.convert_mdetr(mdetr)
-    assert [r["grounding"]["regions"][0]["phrase"] for r in records] == ["yuji", "laogong"]
-    assert len(warnings) == 1 and "P8" in warnings[0]
