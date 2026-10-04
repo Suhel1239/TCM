@@ -12,7 +12,7 @@ One line per annotation (so the same image appears once per point), e.g.
 
 Usage: set INPUT_JSON (original COCO json) and OUTPUT_JSONL below, then run
     python scripts/to_odvg.py
-The original json is never modified.
+The original json is never modified. This script is standalone (it does not need to_mdetr.py).
 """
 
 from __future__ import annotations
@@ -24,8 +24,6 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-from to_mdetr import ACUPOINTS, IMAGE_EXTS, build_lookup, is_mdetr
-
 # ============================================================================
 # SETTINGS - edit these and just run:  python scripts/to_odvg.py
 # ============================================================================
@@ -35,7 +33,31 @@ SENTENCE_MODE = "random"  # "random" = name or code at random, "name" = always y
 SEED = 42
 SHUFFLE_POINTS = True     # shuffle the order of the points within one image
 TOKENS_POSITIVE = [[0, 1]]
+
+# point name -> (category_id, code), same as in to_mdetr.py. Names are matched
+# case-insensitively against the COCO category names; the codes are accepted as names too.
+ACUPOINTS = {
+    "yuji": (0, "LU10"),
+    "laogong": (1, "P8"),
+    "zhongchong": (2, "P9"),
+    "shaofu": (3, "HT8"),
+}
 # ============================================================================
+
+IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
+
+
+def build_lookup(acupoints: dict) -> dict[str, tuple[int, str, str]]:
+    """lowercased name or code -> (category_id, name, code)."""
+    lookup = {}
+    for name, (cid, code) in acupoints.items():
+        lookup[name.lower()] = (cid, name, code)
+        lookup[code.lower()] = (cid, name, code)
+    return lookup
+
+
+def is_mdetr(data: dict) -> bool:
+    return bool(data.get("images")) and all("sentences" in im for im in data["images"])
 
 
 def xywh_to_xyxy(bbox) -> list[int]:
