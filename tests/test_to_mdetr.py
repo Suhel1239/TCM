@@ -40,7 +40,8 @@ def test_convert_matches_mdetr_format():
     assert [a["id"] for a in out["annotations"]] == list(range(8))
     names = {c["id"]: c["name"] for c in CATEGORIES}
     for im, a in zip(out["images"], out["annotations"]):
-        assert set(im) == {"file_name", "height", "width", "id", "sentences"}
+        assert set(im) == {"file_name", "height", "width", "id", "sentences", "dataset_name"}
+        assert im["dataset_name"] == "refcocog"
         assert set(a) == {"id", "image_id", "bbox", "category_id", "area", "iscrowd"}
         assert a["image_id"] == im["id"]
         assert all(isinstance(v, int) for v in a["bbox"]) and isinstance(a["area"], int)

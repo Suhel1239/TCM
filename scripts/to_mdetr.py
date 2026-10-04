@@ -6,8 +6,8 @@ COCO (one image entry, many annotations):
     annotations: [{"image_id": 5, "category_id": 3, "bbox": [...]}, ... 4 points ...]
 
 MDETR (one image entry *per annotation*, with the point name as the sentence):
-    images:      [{"file_name": ..., "height": 1024, "width": 1024, "id": 100, "sentences": "LU10"},
-                  {"file_name": ..., "height": 1024, "width": 1024, "id": 101, "sentences": "HT8"}, ...]
+    images:      [{"file_name": ..., "height": 1024, "width": 1024, "id": 100, "sentences": "LU10",
+                   "dataset_name": "refcocog"}, ...]
     annotations: [{"id": 200, "image_id": 100, "bbox": [...], "category_id": 0, "area": ..., "iscrowd": 0}, ...]
     info: {}, licenses: []
 
@@ -39,6 +39,7 @@ SEED = 42
 IMAGE_ID_START = 0     # first image id in each file
 ANN_ID_START = 0       # first annotation id in each file
 SHUFFLE_POINTS = True  # shuffle the order of the points within one image (as in the original files)
+DATASET_NAME = "refcocog"  # written to every image entry; mmdet's RefExpMetric needs refcoco/refcoco+/refcocog
 
 # point name -> (MDETR category_id, code). Names are matched case-insensitively
 # against the COCO category names; the codes are accepted as names too.
@@ -73,7 +74,7 @@ def to_int(v):
 def convert(data: dict, rng: random.Random, sentence_mode: str = SENTENCE_MODE,
             acupoints: dict = ACUPOINTS, image_id_start: int = IMAGE_ID_START,
             ann_id_start: int = ANN_ID_START, shuffle_points: bool = SHUFFLE_POINTS,
-            source: str = "") -> tuple[dict, list[str]]:
+            dataset_name: str = DATASET_NAME, source: str = "") -> tuple[dict, list[str]]:
     """Convert one COCO dict to MDETR. Returns (mdetr_dict, warnings)."""
     if sentence_mode not in {"random", "name", "code"}:
         raise ValueError(f"SENTENCE_MODE must be random/name/code, got {sentence_mode!r}")
@@ -115,6 +116,7 @@ def convert(data: dict, rng: random.Random, sentence_mode: str = SENTENCE_MODE,
                 "width": img.get("width"),
                 "id": image_id,
                 "sentences": sentence,
+                "dataset_name": dataset_name,
             })
             bbox = [to_int(v) for v in a["bbox"]]
             area = a.get("area", bbox[2] * bbox[3])
