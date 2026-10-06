@@ -1,4 +1,4 @@
-<title>Faiz & Ayesha Nikah</title>
+<title>Seraj & Fahim Shaadi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Gulzar&family=Marcellus+SC&family=Spectral:ital,wght@0,400;0,600;1,400&family=Tiro+Devanagari+Hindi&display=swap">
@@ -200,6 +200,9 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
   text-wrap: balance;
   margin: 0;
 }
+.pair { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.pair .when-tag { font-family: var(--f-display); font-size: .9rem; letter-spacing: .14em; color: var(--emerald); margin-top: 4px; }
+.pair-sep { width: 70%; max-width: 260px; height: 1px; background: linear-gradient(90deg, transparent, var(--zari), transparent); margin-block: 18px; }
 .name-urdu { font-family: var(--f-urdu); font-size: 1.5rem; color: var(--emerald); direction: rtl; line-height: 1.9; }
 .parent { font-size: .95rem; color: var(--ink-soft); margin: 0; max-width: 26em; }
 .parent b { color: var(--ink); font-weight: 600; }
@@ -243,32 +246,6 @@ h2 { font-family: var(--f-display); font-weight: 400; font-size: 1.1rem; letter-
 .muntazir ul { list-style: none; margin: 6px 0 0; padding: 0; font-size: .95rem; color: var(--ink); display: grid; gap: 2px; }
 .muntazir > div { min-width: 0; }
 
-.kids {
-  width: 100%; padding: 16px 18px; border-radius: 10px;
-  background: repeating-linear-gradient(135deg, rgba(201,161,74,.10) 0 8px, transparent 8px 16px);
-  border: 1px solid rgba(201,161,74,.6);
-}
-.kids .hindi { font-size: 1.15rem; color: var(--ground); }
-.kids p { margin: 4px 0 0; font-size: .9rem; color: var(--ink-soft); }
-
-form.rsvp { width: 100%; display: grid; gap: 12px; text-align: left; }
-.row { display: grid; grid-template-columns: 1fr 120px; gap: 12px; }
-label { display: flex; flex-direction: column; gap: 4px; font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); min-width: 0; }
-input, select {
-  font: inherit; font-size: 1rem; letter-spacing: 0; text-transform: none; color: var(--ink);
-  background: #fffdf6; border: 1px solid #d9c49a; border-radius: 6px; padding: 9px 10px; width: 100%;
-}
-fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; }
-fieldset legend { font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px; padding: 0; }
-.check { flex-direction: row; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: .98rem; color: var(--ink); }
-.check input { width: auto; accent-color: var(--ground); }
-.rsvp-out { display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center; }
-.rsvp-out pre { white-space: pre-wrap; font-family: var(--f-body); background: #fffdf6; border: 1px dashed var(--zari); border-radius: 8px; padding: 12px; margin: 0; width: 100%; text-align: left; font-size: .95rem; }
-.actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-
-.closing { display: flex; flex-direction: column; gap: 6px; }
-.closing .ar { font-family: var(--f-arabic); font-size: 1.3rem; color: var(--emerald); direction: rtl; }
-.closing small { color: var(--ink-soft); font-style: italic; }
 
 @media (max-width: 520px) {
   body { font-size: 16px; padding-block: 24px 40px; }
@@ -281,10 +258,11 @@ fieldset legend { font-size: .78rem; letter-spacing: .1em; text-transform: upper
 }
 </style>
 
-<div class="gate" id="gate" aria-hidden="true">
+
+<div class="gate" id="gate" role="button" tabindex="0" aria-label="Open the invitation">
   <div class="door left"></div>
   <div class="door right"></div>
-  <div class="seal"><span class="ur" lang="ur">شادی مبارک</span><small>F ❁ A</small></div>
+  <div class="seal"><span class="ur" lang="ur">شادی مبارک</span><small>30 · 31 Dec</small></div>
   <p class="gate-hint">Bismillah · Tap to open</p>
 </div>
 <canvas class="sky" id="sky" aria-hidden="true"></canvas>
@@ -311,32 +289,33 @@ fieldset legend { font-size: .78rem; letter-spacing: .1em; text-transform: upper
     </svg>
 
     <div class="lead">
-      <p class="urdu" lang="ur">بصد احترام آپ کو اپنے نورِ نظر کی تقریبِ نکاح میں شرکت کی دعوت دیتے ہیں۔ آپ کی تشریف آوری ہمارے لیے باعثِ مسرت ہوگی۔</p>
-      <p class="hindi" lang="hi">बसद एहतराम आपको अपने नूर-ए-नज़र की तक़रीब-ए-निकाह में शिरकत की दावत देते हैं। आपकी तशरीफ़ आवरी हमारे लिए बाइस-ए-मसर्रत होगी।</p>
+      <p class="urdu" lang="ur">بصد احترام آپ کو اپنے نورِ نظر کی تقریباتِ نکاح میں شرکت کی دعوت دیتے ہیں۔ آپ کی تشریف آوری ہمارے لیے باعثِ مسرت ہوگی۔</p>
+      <p class="hindi" lang="hi">बसद एहतराम आपको अपने नूर-ए-नज़र की तक़रीबात-ए-निकाह में शिरकत की दावत देते हैं। आपकी तशरीफ़ आवरी हमारे लिए बाइस-ए-मसर्रत होगी।</p>
     </div>
 
     <div class="couple">
-      <span class="eyebrow">Nau-shah · The Groom</span>
-      <h1 class="name foil">Mohammad Faiz Ansari</h1>
-      <div class="name-urdu" lang="ur">محمد فیض انصاری</div>
-      <p class="parent">B.Tech · son of <b>Janab Haji Abdul Rasheed Ansari Sahab</b><br>Mohalla Dakshin Tola, Mau</p>
-
-      <div class="ampersand foil" aria-label="with">❁</div>
-
-      <span class="eyebrow">Dulhan · The Bride</span>
-      <h1 class="name foil">Ayesha Parveen</h1>
-      <div class="name-urdu" lang="ur">عائشہ پروین</div>
-      <p class="parent">M.A. · daughter of <b>Janab Mohammad Shamim Ansari Sahab</b><br>Pura Sofi, Mubarakpur, Azamgarh</p>
-    </div>
-
-    <div class="date-block">
-      <span class="eyebrow">Nikah · Insha’Allah</span>
-      <div class="date-big foil">Sunday, 22 November 2026</div>
-      <div class="hijri" id="hijri">12 Jumada al-Akhirah 1448</div>
+      <span class="eyebrow">Shaadi-e-Khana Aabadi · Insha’Allah</span>
+      <div class="pair">
+        <h1 class="name foil">Seraj Khan</h1>
+        <div class="name-urdu" lang="ur">سراج خان</div>
+        <div class="ampersand foil" aria-label="weds">❁</div>
+        <h1 class="name foil">Nargish</h1>
+        <div class="name-urdu" lang="ur">نرگس</div>
+        <div class="when-tag">Wednesday, 30 December 2026</div>
+      </div>
+      <div class="pair-sep" aria-hidden="true"></div>
+      <div class="pair">
+        <h1 class="name foil">Fahim</h1>
+        <div class="name-urdu" lang="ur">فہیم</div>
+        <div class="ampersand foil" aria-label="weds">❁</div>
+        <h1 class="name foil">Fatima</h1>
+        <div class="name-urdu" lang="ur">فاطمہ</div>
+        <div class="when-tag">Thursday, 31 December 2026</div>
+      </div>
     </div>
 
     <div class="countdown" id="countdown" aria-live="polite">
-      <div><b id="cd-d">47</b><span>Din</span></div>
+      <div><b id="cd-d">85</b><span>Din</span></div>
       <div><b id="cd-h">00</b><span>Ghante</span></div>
       <div><b id="cd-m">00</b><span>Minute</span></div>
     </div>
@@ -344,32 +323,35 @@ fieldset legend { font-size: .78rem; letter-spacing: .1em; text-transform: upper
     <h2 class="foil">Taqreebat · Programme</h2>
     <div class="events">
       <div class="event">
-        <div class="when">21 Nov<small>Saturday</small></div>
-        <div class="what">
-          <h3>Mehndi &amp; Manjha <span class="u" lang="ur">مہندی</span></h3>
-          <p>Ba’d namaz-e-Isha, 8:00 pm · Dulhan ka ghar, Pura Sofi, Mubarakpur</p>
-        </div>
-      </div>
-      <div class="event">
-        <div class="when">22 Nov<small>Sunday</small></div>
+        <div class="when">30 Dec<small>Wednesday</small></div>
         <div class="what">
           <h3>Baraat &amp; Nikah <span class="u" lang="ur">نکاح</span></h3>
-          <p>Baraat rawana 10:30 am from Mau · Nikah ba’d namaz-e-Zuhr · Dawat-e-taam to follow · Rukhsati ba’d Asr</p>
+          <p>Seraj Khan weds Nargish · Nikah ba’d namaz-e-Zuhr · Dawat-e-taam to follow</p>
+          <p class="hijri" data-hijri="2026-12-30">21 Rajab 1448 AH (approx.)</p>
         </div>
       </div>
       <div class="event">
-        <div class="when">23 Nov<small>Monday</small></div>
+        <div class="when">31 Dec<small>Thursday</small></div>
+        <div class="what">
+          <h3>Baraat &amp; Nikah <span class="u" lang="ur">نکاح</span></h3>
+          <p>Fahim weds Fatima · Nikah ba’d namaz-e-Zuhr · Dawat-e-taam to follow</p>
+          <p class="hijri" data-hijri="2026-12-31">22 Rajab 1448 AH (approx.)</p>
+        </div>
+      </div>
+      <div class="event">
+        <div class="when">1 Jan<small>Friday, 2027</small></div>
         <div class="what">
           <h3>Dawat-e-Walima <span class="u" lang="ur">ولیمہ</span></h3>
-          <p>1:00 pm onwards · Ansari Manzil, Dakshin Tola, Mau</p>
+          <p>For both couples · ba’d namaz-e-Juma</p>
+          <p class="hijri" data-hijri="2027-01-01">23 Rajab 1448 AH (approx.)</p>
         </div>
       </div>
     </div>
 
     <div class="venue">
-      <h2 class="foil">Nikah ka Maqaam</h2>
+      <h2 class="foil">Maqaam · Venue</h2>
       <address>Darul Masarrat Marriage Lawn<br>Near Jama Masjid, Pura Sofi, Mubarakpur, Azamgarh (U.P.)</address>
-      <a class="btn ghost" href="https://www.google.com/maps/search/?api=1&query=Pura+Sofi+Mubarakpur+Azamgarh" target="_blank" rel="noopener">Open in Maps ↗</a>
+      <a class="btn ghost" href="https://www.google.com/maps/search/?api=1&amp;query=Pura+Sofi+Mubarakpur+Azamgarh" target="_blank" rel="noopener">Open in Maps ↗</a>
     </div>
 
     <svg class="rule" viewBox="0 0 360 18" aria-hidden="true">
@@ -383,16 +365,14 @@ fieldset legend { font-size: .78rem; letter-spacing: .1em; text-transform: upper
       <div>
         <span class="eyebrow">Muntazir · Awaiting you</span>
         <ul>
-          <li>Haji Abdul Rasheed Ansari</li>
-          <li>Abdul Majeed Ansari (Chacha)</li>
-          <li>Mohammad Danish, Mohammad Arif</li>
+          <li>Haji Abdul Rasheed Khan</li>
+          <li>Abdul Majeed Khan (Chacha)</li>
           <li>&amp; tamaam ahl-e-khana</li>
         </ul>
       </div>
       <div>
         <span class="eyebrow">Dua-go · With prayers</span>
         <ul>
-          <li>Mohammad Shamim Ansari</li>
           <li>Hafiz Naseem Ahmad (Mamu)</li>
           <li>Shabana, Rukhsar</li>
           <li>&amp; tamaam rishtedaar</li>
@@ -400,67 +380,27 @@ fieldset legend { font-size: .78rem; letter-spacing: .1em; text-transform: upper
       </div>
     </div>
 
-    <div class="kids">
-      <div class="hindi" lang="hi">“मेरे चाचू की शादी में ज़रूर-ज़रूर आना!”</div>
-      <p>— Nanhe mehmaan: Zoya, Ayaan, Huzaifa &amp; Inaya</p>
-    </div>
-
-    <h2 class="foil">Tashreef Layenge? · RSVP</h2>
-    <form class="rsvp" id="rsvp" novalidate>
-      <div class="row">
-        <label for="r-name">Aapka naam
-          <input id="r-name" name="name" type="text" placeholder="e.g. Shakeel Ahmad, Ghosi" autocomplete="name" required>
-        </label>
-        <label for="r-count">Kitne log
-          <select id="r-count" name="count">
-            <option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6+</option>
-          </select>
-        </label>
-      </div>
-      <fieldset>
-        <legend>Kis taqreeb mein aayenge</legend>
-        <label class="check" for="r-e1"><input id="r-e1" type="checkbox" value="Mehndi"> Mehndi</label>
-        <label class="check" for="r-e2"><input id="r-e2" type="checkbox" value="Nikah" checked> Nikah</label>
-        <label class="check" for="r-e3"><input id="r-e3" type="checkbox" value="Walima" checked> Walima</label>
-      </fieldset>
-      <div class="actions"><button class="btn" type="submit">Prepare RSVP</button></div>
-    </form>
-    <div class="rsvp-out" id="rsvp-out" hidden>
-      <pre id="rsvp-msg"></pre>
-      <div class="actions">
-        <a class="btn" id="rsvp-wa" href="#" target="_blank" rel="noopener" hidden>Send on WhatsApp ↗</a>
-        <button class="btn ghost" type="button" id="rsvp-copy">Copy message</button>
-      </div>
-      <small id="rsvp-note" class="parent"></small>
-    </div>
-
-    <div class="closing">
-      <div class="ar" lang="ar">بَارَكَ ٱللَّٰهُ لَكُمَا وَبَارَكَ عَلَيْكُمَا وَجَمَعَ بَيْنَكُمَا فِي خَيْرٍ</div>
-      <small>“May Allah bless you both, shower His blessings upon you, and unite you in goodness.”</small>
-    </div>
-
   </div>
 </main>
 
 <script>
-// Family's WhatsApp number for RSVPs, with country code and no "+" (e.g. "919876543210").
-// Leave empty to show only the "Copy message" button.
-var RSVP_WHATSAPP = "";
-var NIKAH_AT = new Date("2026-11-22T13:00:00+05:30");
+var FIRST_NIKAH = new Date("2026-12-30T13:00:00+05:30");
 
 (function hijri() {
   try {
     var f = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Kolkata" });
-    var p = {};
-    f.formatToParts(NIKAH_AT).forEach(function (x) { p[x.type] = x.value; });
-    if (p.day && p.month && p.year) document.getElementById("hijri").textContent = p.day + " " + p.month + " " + p.year.replace(/\D/g, "") + " AH (approx.)";
-  } catch (e) { /* keep the printed date */ }
+    document.querySelectorAll("[data-hijri]").forEach(function (el) {
+      var p = {};
+      f.formatToParts(new Date(el.getAttribute("data-hijri") + "T12:00:00+05:30")).forEach(function (x) { p[x.type] = x.value; });
+      if (p.day && p.month && p.year) el.textContent = p.day + " " + p.month + " " + p.year.replace(/\D/g, "") + " AH (approx.)";
+    });
+  } catch (e) { /* keep the printed dates */ }
 })();
 
 function tick() {
-  var ms = NIKAH_AT - Date.now();
+  var ms = FIRST_NIKAH - Date.now();
   if (ms <= 0) {
-    document.getElementById("countdown").innerHTML = '<div style="padding:8px 16px"><b>Mubarak ho!</b><span>Nikah ho gaya</span></div>';
+    document.getElementById("countdown").innerHTML = '<div style="padding:8px 16px"><b>Mubarak ho!</b><span>Shaadi mubarak</span></div>';
     return;
   }
   var m = Math.floor(ms / 60000);
@@ -470,47 +410,6 @@ function tick() {
   setTimeout(tick, 30000);
 }
 tick();
-
-var form = document.getElementById("rsvp");
-var out = document.getElementById("rsvp-out");
-var msgEl = document.getElementById("rsvp-msg");
-var wa = document.getElementById("rsvp-wa");
-var note = document.getElementById("rsvp-note");
-
-form.addEventListener("submit", function (e) {
-  e.preventDefault();
-  var nameInput = document.getElementById("r-name");
-  var name = nameInput.value.trim();
-  if (!name) { nameInput.focus(); nameInput.placeholder = "Pehle apna naam likhiye"; return; }
-  var events = Array.prototype.slice.call(form.querySelectorAll("fieldset input:checked")).map(function (i) { return i.value; });
-  var count = document.getElementById("r-count").value;
-  var text = "Assalamu Alaikum,\n" + name + " — Faiz & Ayesha ki shaadi mein " +
-    (events.length ? events.join(", ") : "shirkat nahi kar paayenge, dua-e-khair ke saath") +
-    (events.length ? " mein " + count + " log Insha'Allah aayenge." : ".") +
-    "\nMubarakbaad!";
-  msgEl.textContent = text;
-  if (RSVP_WHATSAPP) {
-    wa.href = "https://wa.me/" + RSVP_WHATSAPP + "?text=" + encodeURIComponent(text);
-    wa.hidden = false;
-    note.textContent = "";
-  } else {
-    wa.hidden = true;
-    note.textContent = "Copy this message and send it to the family on WhatsApp.";
-  }
-  out.hidden = false;
-});
-
-document.getElementById("rsvp-copy").addEventListener("click", function () {
-  var btn = this;
-  function selectText() {
-    var r = document.createRange(); r.selectNodeContents(msgEl);
-    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
-    btn.textContent = "Selected, press copy";
-  }
-  try {
-    navigator.clipboard.writeText(msgEl.textContent).then(function () { btn.textContent = "Copied"; }, selectText);
-  } catch (e) { selectText(); }
-});
 
 /* ---------- gold glitter ---------- */
 var reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -590,11 +489,12 @@ function loop(t) {
 }
 if (reduceMotion) drawSky(0); else requestAnimationFrame(loop);
 
-/* ---------- opening doors ---------- */
-var gate = document.getElementById("gate"), replay = document.getElementById("replay"), openTimer, opened = false;
+/* ---------- opening doors: open only when the guest taps ---------- */
+var gate = document.getElementById("gate"), replay = document.getElementById("replay"), opened = false;
 function openGate() {
   if (opened) return;
-  opened = true; clearTimeout(openTimer);
+  opened = true;
+  if (reduceMotion) { gate.hidden = true; replay.hidden = false; return; }
   gate.classList.add("open");
   document.body.classList.add("opened");
   burst();
@@ -607,9 +507,9 @@ function showGate() {
   gate.classList.remove("open", "fade");
   gate.hidden = false; replay.hidden = true;
   scrollTo(0, 0);
-  openTimer = setTimeout(openGate, 1800);
+  gate.focus();
 }
 gate.addEventListener("click", openGate);
+gate.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openGate(); } });
 replay.addEventListener("click", showGate);
-if (reduceMotion) { gate.hidden = true; replay.hidden = true; } else showGate();
 </script>
