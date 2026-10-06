@@ -242,7 +242,9 @@ h2 { font-family: var(--f-display); font-weight: 400; font-size: 1.1rem; letter-
 .btn:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--emerald); outline-offset: 2px; }
 .btn.ghost { background: transparent; color: var(--ground); }
 
-.muntazir { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: center; }
+.host { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 28px; border: 1px solid var(--zari); outline: 1px solid var(--zari); outline-offset: 4px; border-radius: 10px; }
+.host-name { font-family: var(--f-display); font-size: clamp(1.5rem, 5.5vw, 2rem); line-height: 1.15; text-wrap: balance; }
+.muntazir { width: 100%; text-align: center; }
 .muntazir ul { list-style: none; margin: 6px 0 0; padding: 0; font-size: .95rem; color: var(--ink); display: grid; gap: 2px; }
 .muntazir > div { min-width: 0; }
 
@@ -252,7 +254,6 @@ h2 { font-family: var(--f-display); font-weight: 400; font-size: 1.1rem; letter-
   .card { padding: 72px 22px 36px; border-radius: 50% 50% 12px 12px / 120px 120px 12px 12px; }
   .card::before { border-radius: 50% 50% 6px 6px / 110px 110px 6px 6px; inset: 9px; }
   .event { grid-template-columns: 74px 1fr; gap: 12px; }
-  .muntazir { grid-template-columns: 1fr; }
   .row { grid-template-columns: 1fr; }
   .bismillah { font-size: 1.75rem; }
 }
@@ -349,9 +350,9 @@ h2 { font-family: var(--f-display); font-weight: 400; font-size: 1.1rem; letter-
     </div>
 
     <div class="venue">
-      <h2 class="foil">Maqaam · Venue</h2>
-      <address>Darul Masarrat Marriage Lawn<br>Near Jama Masjid, Pura Sofi, Mubarakpur, Azamgarh (U.P.)</address>
-      <a class="btn ghost" href="https://www.google.com/maps/search/?api=1&amp;query=Pura+Sofi+Mubarakpur+Azamgarh" target="_blank" rel="noopener">Open in Maps ↗</a>
+      <h2 class="foil">Maqaam · Address</h2>
+      <address>Village Kaulachhapar, Post Madarapali<br>Bharath Rai, Deoria (U.P.) 274405</address>
+      <a class="btn ghost" href="https://www.google.com/maps/search/?api=1&amp;query=Kaulachhapar+Deoria+Uttar+Pradesh+274405" target="_blank" rel="noopener">Open in Maps ↗</a>
     </div>
 
     <svg class="rule" viewBox="0 0 360 18" aria-hidden="true">
@@ -361,23 +362,22 @@ h2 { font-family: var(--f-display); font-weight: 400; font-size: 1.1rem; letter-
       <circle cx="160" cy="9" r="2.5" fill="#c9a14a"/><circle cx="200" cy="9" r="2.5" fill="#c9a14a"/>
     </svg>
 
+    <div class="host">
+      <span class="eyebrow">Mezbaan · Your host</span>
+      <div class="host-name foil">Mohd Abul Hasan Khan</div>
+      <div class="name-urdu" lang="ur">محمد ابو الحسن خان</div>
+    </div>
+
     <div class="muntazir">
-      <div>
-        <span class="eyebrow">Muntazir · Awaiting you</span>
-        <ul>
-          <li>Haji Abdul Rasheed Khan</li>
-          <li>Abdul Majeed Khan (Chacha)</li>
-          <li>&amp; tamaam ahl-e-khana</li>
-        </ul>
-      </div>
-      <div>
-        <span class="eyebrow">Dua-go · With prayers</span>
-        <ul>
-          <li>Hafiz Naseem Ahmad (Mamu)</li>
-          <li>Shabana, Rukhsar</li>
-          <li>&amp; tamaam rishtedaar</li>
-        </ul>
-      </div>
+      <span class="eyebrow">Muntazir · Awaiting you</span>
+      <ul>
+        <li>Hasan Khan</li>
+        <li>Suhel Khan</li>
+        <li>Abdul Malik Khan</li>
+        <li>Saud Khan</li>
+        <li>Hammad Khan</li>
+        <li>&amp; tamaam ahl-e-khana</li>
+      </ul>
     </div>
 
   </div>
