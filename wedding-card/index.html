@@ -52,7 +52,7 @@ body {
   font-family: var(--f-body);
   font-size: 17px;
   line-height: 1.6;
-  padding-inline: 16px;
+  padding-inline: clamp(16px, 5vw, 48px);
   padding-block: 40px 56px;
 }
 
@@ -145,12 +145,13 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
 .door.left { left: 0; transform-origin: left center; box-shadow: inset -3px 0 0 #e9c873, inset -10px 0 0 var(--ground-deep), inset -12px 0 0 #b8862e; }
 .door.right { right: 0; transform-origin: right center; box-shadow: inset 3px 0 0 #e9c873, inset 10px 0 0 var(--ground-deep), inset 12px 0 0 #b8862e; }
 .door::before {             /* half of a mehrab outline on each door */
-  content: ""; position: absolute; top: 9%; bottom: 7%; width: 150%;
+  content: ""; position: absolute; top: 9%; bottom: 7%; width: var(--aw);
   border: 2px solid #d9b45e; outline: 1px solid rgba(233,200,115,.6); outline-offset: 8px;
   border-radius: 50% 50% 6px 6px / 26% 26% 6px 6px;
 }
-.door.left::before { left: 25%; }
-.door.right::before { right: 25%; }
+.gate { --aw: min(76vw, 620px); }
+.door.left::before { right: calc(var(--aw) / -2); }
+.door.right::before { left: calc(var(--aw) / -2); }
 .gate.open .door.left { transform: rotateY(-105deg); filter: brightness(.6); }
 .gate.open .door.right { transform: rotateY(105deg); filter: brightness(.6); }
 .gate.open { pointer-events: none; }
@@ -193,8 +194,8 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
 .gate-deco { position: absolute; inset: 0; z-index: 2; pointer-events: none; transition: opacity .5s; }
 .gate.open .gate-deco { opacity: 0; }
 .lantern { position: absolute; top: 0; width: 42px; transform-origin: 50% 0; animation: swing 4s ease-in-out infinite; }
-.lantern.l1 { left: 9%; }
-.lantern.l2 { right: 9%; animation-delay: -2s; }
+.lantern.l1 { left: max(4%, calc(50% - var(--aw) / 2 - 64px)); }
+.lantern.l2 { right: max(4%, calc(50% - var(--aw) / 2 - 64px)); animation-delay: -2s; }
 .lantern .glow { animation: flicker 2.4s ease-in-out infinite; }
 @keyframes swing { 0%, 100% { transform: rotate(4deg); } 50% { transform: rotate(-4deg); } }
 @keyframes flicker { 0%, 100% { opacity: .85; } 40% { opacity: 1; } 60% { opacity: .7; } }
@@ -294,7 +295,27 @@ h2 { font-family: var(--f-display); font-weight: 400; font-size: 1.1rem; letter-
 .muntazir > div { min-width: 0; }
 
 
+@media (min-width: 900px) {
+  body { font-size: 18px; padding-block: 56px 72px; }
+  .card { max-width: 860px; padding: 120px 72px 60px; border-radius: 50% 50% 16px 16px / 250px 250px 16px 16px; }
+  .card::before { border-radius: 50% 50% 10px 10px / 238px 238px 10px 10px; }
+  .stack { gap: 34px; }
+  .bismillah { font-size: 2.5rem; }
+  .couple { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; column-gap: 28px; width: 100%; }
+  .couple > .eyebrow { grid-column: 1 / -1; justify-self: center; margin-bottom: 10px; }
+  .pair { min-width: 0; }
+  .pair-sep { width: 1px; max-width: none; height: auto; align-self: stretch; margin-block: 0; background: linear-gradient(180deg, transparent, var(--zari), transparent); }
+  .events { max-width: 640px; }
+  .lantern { width: 58px; }
+  .masjid { width: min(680px, 100%); }
+  .seal { width: 270px; height: 270px; margin: -135px 0 0 -135px; }
+  .seal .bism { font-size: 1.5rem; }
+  .seal .ur { font-size: 2.15rem; }
+  .gate-hint { top: calc(50% + 165px); font-size: .9rem; }
+}
 @media (max-width: 520px) {
+  .replay { padding: 8px 12px; font-size: 1rem; letter-spacing: 0; }
+  .replay-text { display: none; }
   body { font-size: 16px; padding-block: 24px 40px; }
   .card { padding: 72px 22px 36px; border-radius: 50% 50% 12px 12px / 120px 120px 12px 12px; }
   .card::before { border-radius: 50% 50% 6px 6px / 110px 110px 6px 6px; inset: 9px; }
@@ -311,7 +332,7 @@ h2 { font-family: var(--f-display); font-weight: 400; font-size: 1.1rem; letter-
   <div class="door right"></div>
   <div class="seam"></div>
   <div class="seal"><span class="bism" lang="ar">بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</span><span class="seal-line"></span><span class="ur" lang="ur">شادی مبارک</span></div>
-  <p class="gate-hint">Tap to open · کھولیے</p>
+  <p class="gate-hint">Tap to open</p>
   <div class="gate-deco" aria-hidden="true">
     <svg class="lantern l1" viewBox="0 0 42 130" aria-hidden="true">
       <line x1="21" y1="0" x2="21" y2="44" stroke="#d9b45e" stroke-width="1.5" stroke-dasharray="3 2"/>
@@ -361,7 +382,7 @@ h2 { font-family: var(--f-display); font-weight: 400; font-size: 1.1rem; letter-
 </div>
 <canvas class="sky" id="sky" aria-hidden="true"></canvas>
 <canvas class="burst" id="burst" aria-hidden="true"></canvas>
-<button class="replay" id="replay" type="button" hidden>↺ Phir se kholiye</button>
+<button class="replay" id="replay" type="button" aria-label="Phir se kholiye" hidden>↺<span class="replay-text"> Phir se kholiye</span></button>
 
 <main class="card">
   <span class="glint g1"></span><span class="glint g2"></span><span class="glint g3"></span><span class="glint g4"></span><span class="glint g5"></span>
@@ -518,13 +539,19 @@ function star(ctx, x, y, r, a) {
 var sky = document.getElementById("sky"), skyCtx, twinkles = [];
 function seedSky() {
   skyCtx = fitCanvas(sky);
-  var n = Math.round(innerWidth * innerHeight / 9000);
+  var n = Math.round(innerWidth * innerHeight / 7000);
   twinkles = [];
-  for (var i = 0; i < n; i++) twinkles.push({
-    x: Math.random() * innerWidth, y: Math.random() * innerHeight,
-    r: 2 + Math.random() * 5, ph: Math.random() * 6.28, sp: .6 + Math.random() * 1.4,
-    c: GOLDS[i % GOLDS.length], dy: .05 + Math.random() * .15
-  });
+  function add(x, i) {
+    twinkles.push({ x: x, y: Math.random() * innerHeight,
+      r: 2.5 + Math.random() * 5.5, ph: Math.random() * 6.28, sp: .6 + Math.random() * 1.6,
+      c: GOLDS[i % GOLDS.length], dy: .06 + Math.random() * .2 });
+  }
+  for (var i = 0; i < n; i++) add(Math.random() * innerWidth, i);
+  /* extra glitter in the red space beside the card */
+  var card = document.querySelector(".card").getBoundingClientRect();
+  var side = Math.max(0, card.left - 4);
+  var extra = Math.round(side * innerHeight / 2200);
+  for (var j = 0; j < extra; j++) add(j % 2 ? Math.random() * side : innerWidth - Math.random() * side, j);
 }
 function drawSky(t) {
   skyCtx.clearRect(0, 0, innerWidth, innerHeight);
@@ -533,7 +560,7 @@ function drawSky(t) {
     var a = reduceMotion ? .7 : Math.max(0, Math.sin(t / 1000 * p.sp + p.ph));
     if (!reduceMotion) { p.y -= p.dy; if (p.y < -10) p.y = innerHeight + 10; }
     skyCtx.fillStyle = p.c;
-    skyCtx.shadowColor = "rgba(255,230,160,.9)"; skyCtx.shadowBlur = 8 * a;
+    skyCtx.shadowColor = "rgba(255,230,160,1)"; skyCtx.shadowBlur = 12 * a;
     star(skyCtx, p.x, p.y, p.r * (.5 + a * .5), a);
   }
   skyCtx.globalAlpha = 1;
