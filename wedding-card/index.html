@@ -162,13 +162,20 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
   transition: opacity .4s;
 }
 .gate.open .gate-hint { opacity: 0; }
+/* glowing seam where the doors meet */
+.seam {
+  position: absolute; top: 0; bottom: 0; left: 50%; width: 4px; margin-left: -2px; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,241,191,.2), #fff6d6 20%, #f3d98b 50%, #fff6d6 80%, rgba(255,241,191,.2));
+  box-shadow: 0 0 8px 2px rgba(255,226,150,.9), 0 0 24px 6px rgba(233,200,115,.6), 0 0 60px 14px rgba(233,200,115,.3);
+  animation: seamglow 2.4s ease-in-out infinite;
+  transition: opacity .4s;
+}
+@keyframes seamglow { 50% { box-shadow: 0 0 12px 3px rgba(255,236,170,1), 0 0 36px 10px rgba(233,200,115,.75), 0 0 90px 22px rgba(233,200,115,.4); } }
+.gate.open .seam { opacity: 0; }
 
 /* Islamic ornaments on the closed doors */
 .gate-deco { position: absolute; inset: 0; z-index: 2; pointer-events: none; transition: opacity .5s; }
 .gate.open .gate-deco { opacity: 0; }
-.gate-top { position: absolute; left: 0; right: 0; top: calc(7% + env(safe-area-inset-top, 0px)); display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.crescent { width: 64px; height: 64px; filter: drop-shadow(0 0 12px rgba(255,236,170,.65)); animation: moonglow 3s ease-in-out infinite; }
-@keyframes moonglow { 50% { filter: drop-shadow(0 0 22px rgba(255,236,170,.9)); } }
 .lantern { position: absolute; top: 0; width: 42px; transform-origin: 50% 0; animation: swing 4s ease-in-out infinite; }
 .lantern.l1 { left: 9%; }
 .lantern.l2 { right: 9%; animation-delay: -2s; }
@@ -177,8 +184,8 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
 @keyframes flicker { 0%, 100% { opacity: .85; } 40% { opacity: 1; } 60% { opacity: .7; } }
 .masjid { position: absolute; left: 50%; bottom: 0; width: min(440px, 100%); transform: translateX(-50%); display: block;
   filter: drop-shadow(0 -4px 14px rgba(233,200,115,.25)); }
-@media (max-height: 640px) { .lantern { display: none; } .crescent { width: 48px; height: 48px; } }
-@media (prefers-reduced-motion: reduce) { .crescent, .lantern, .lantern .glow { animation: none; } }
+@media (max-height: 640px) { .lantern { display: none; } }
+@media (prefers-reduced-motion: reduce) { .seam, .lantern, .lantern .glow { animation: none; } }
 body.gate-up canvas.sky { z-index: 35; }
 
 .replay {
@@ -285,6 +292,7 @@ h2 { font-family: var(--f-display); font-weight: 400; font-size: 1.1rem; letter-
 <div class="gate" id="gate" role="button" tabindex="0" aria-label="Open the invitation">
   <div class="door left"></div>
   <div class="door right"></div>
+  <div class="seam"></div>
   <div class="seal"><span class="bism" lang="ar">بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</span><span class="seal-line"></span><span class="ur" lang="ur">شادی مبارک</span></div>
   <p class="gate-hint">Tap to open · کھولیے</p>
   <div class="gate-deco" aria-hidden="true">
@@ -308,16 +316,6 @@ h2 { font-family: var(--f-display); font-weight: 400; font-size: 1.1rem; letter-
       <path d="M11 96 H31 L26 104 H16 Z" fill="#b8862e"/>
       <path d="M21 104 L18 114 L21 122 L24 114 Z" fill="#e9c873"/>
     </svg>
-    <div class="gate-top">
-      <svg class="crescent" viewBox="0 0 64 64">
-        <defs>
-          <linearGradient id="moonGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff1bf"/><stop offset=".5" stop-color="#e9c873"/><stop offset="1" stop-color="#b8862e"/></linearGradient>
-          <mask id="moonCut"><rect width="64" height="64" fill="#fff"/><circle cx="40" cy="26" r="19" fill="#000"/></mask>
-        </defs>
-        <circle cx="30" cy="34" r="24" fill="url(#moonGold)" mask="url(#moonCut)"/>
-        <path d="M47 14 L49.2 20 L55.5 20.2 L50.5 24.2 L52.3 30.3 L47 26.7 L41.7 30.3 L43.5 24.2 L38.5 20.2 L44.8 20 Z" fill="url(#moonGold)"/>
-      </svg>
-    </div>
     <svg class="masjid" viewBox="0 0 440 150" preserveAspectRatio="xMidYMax meet">
       <defs><linearGradient id="mGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff1bf"/><stop offset="1" stop-color="#b8862e"/></linearGradient></defs>
       <g fill="#2b0610" stroke="url(#mGold)" stroke-width="2">
