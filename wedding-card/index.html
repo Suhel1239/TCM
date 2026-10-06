@@ -1,0 +1,385 @@
+<title>Faiz & Ayesha Nikah</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Gulzar&family=Marcellus+SC&family=Spectral:ital,wght@0,400;0,600;1,400&family=Tiro+Devanagari+Hindi&display=swap">
+<style>
+/* Layout: one ivory card with a mehrab (arch) top, set on a maroon Banarasi-jaal ground; sections stack down the card like a printed shaadi card. */
+:root {
+  --ground: #5a0f1f;        /* deep maroon, like a Banarasi saree body */
+  --ground-deep: #3c0914;
+  --zari: #c9a14a;          /* gold zari thread */
+  --zari-soft: #e6cf8f;
+  --paper: #fbf6ea;         /* ivory card stock */
+  --ink: #3a1a12;           /* brown-black ink */
+  --ink-soft: #6e4a3a;
+  --emerald: #1f5b47;       /* green accent for the Islamic lines */
+  --f-display: "Marcellus SC", "Trajan Pro", Georgia, serif;
+  --f-body: "Spectral", Georgia, "Times New Roman", serif;
+  --f-arabic: "Amiri", "Traditional Arabic", "Scheherazade New", serif;
+  --f-urdu: "Gulzar", "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", serif;
+  --f-hindi: "Tiro Devanagari Hindi", "Noto Serif Devanagari", "Mangal", serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body {
+  background-color: var(--ground);
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(201,161,74,.18), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23c9a14a' stroke-opacity='.28' stroke-width='1'%3E%3Cpath d='M28 2 L54 28 L28 54 L2 28 Z'/%3E%3C/g%3E%3Cg fill='%23c9a14a' fill-opacity='.35'%3E%3Cpath d='M28 18c3 4 3 8 0 12c-3-4-3-8 0-12z'/%3E%3Cpath d='M28 38c-3-4-3-8 0-12c3 4 3 8 0 12z' fill-opacity='.2'/%3E%3Ccircle cx='0' cy='0' r='2'/%3E%3Ccircle cx='56' cy='0' r='2'/%3E%3Ccircle cx='0' cy='56' r='2'/%3E%3Ccircle cx='56' cy='56' r='2'/%3E%3C/g%3E%3C/svg%3E");
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 17px;
+  line-height: 1.6;
+  padding-inline: 16px;
+  padding-block: 40px 56px;
+}
+
+.card {
+  position: relative;
+  max-width: 620px;
+  margin: 0 auto;
+  background: var(--paper);
+  border-radius: 50% 50% 14px 14px / 190px 190px 14px 14px;
+  padding: 92px 44px 48px;
+  box-shadow: 0 30px 60px -20px rgba(0,0,0,.6), 0 0 0 6px var(--ground-deep), 0 0 0 8px var(--zari);
+  animation: rise .9s ease-out both;
+}
+.card::before {             /* inner double zari border following the arch */
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1.5px solid var(--zari);
+  outline: 1px solid var(--zari);
+  outline-offset: 4px;
+  border-radius: 50% 50% 8px 8px / 178px 178px 8px 8px;
+  pointer-events: none;
+}
+@keyframes rise { from { transform: translateY(14px); opacity: .6; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .card { animation: none; } }
+
+.stack { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 28px; position: relative; }
+
+.bismillah { font-family: var(--f-arabic); font-size: 2.1rem; color: var(--emerald); line-height: 1.4; }
+.verse { display: flex; flex-direction: column; gap: 4px; max-width: 30em; }
+.verse .ar { font-family: var(--f-arabic); font-size: 1.45rem; color: var(--ink); direction: rtl; }
+.verse .tr { font-style: italic; color: var(--ink-soft); font-size: .95rem; }
+.verse .ref { font-family: var(--f-display); font-size: .72rem; letter-spacing: .14em; color: var(--zari); }
+
+.rule { width: 100%; max-width: 360px; height: 18px; display: block; }
+
+.lead { display: flex; flex-direction: column; gap: 10px; max-width: 32em; }
+.urdu { font-family: var(--f-urdu); font-size: 1.35rem; direction: rtl; line-height: 2.1; color: var(--ink); }
+.hindi { font-family: var(--f-hindi); font-size: 1.05rem; color: var(--ink-soft); }
+.lead p { margin: 0; }
+
+.couple { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.eyebrow { font-family: var(--f-display); font-size: .75rem; letter-spacing: .22em; color: var(--zari); text-transform: uppercase; }
+.name {
+  font-family: var(--f-display);
+  font-size: clamp(2rem, 7vw, 2.9rem);
+  line-height: 1.1;
+  color: var(--ground);
+  text-wrap: balance;
+  margin: 0;
+}
+.name-urdu { font-family: var(--f-urdu); font-size: 1.5rem; color: var(--emerald); direction: rtl; line-height: 1.9; }
+.parent { font-size: .95rem; color: var(--ink-soft); margin: 0; max-width: 26em; }
+.parent b { color: var(--ink); font-weight: 600; }
+.ampersand { font-family: var(--f-arabic); font-size: 2.4rem; color: var(--zari); line-height: 1; padding-block: 6px; }
+
+.date-block { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.date-big { font-family: var(--f-display); font-size: 1.5rem; letter-spacing: .06em; color: var(--ink); }
+.hijri { font-family: var(--f-body); font-style: italic; color: var(--emerald); font-size: 1rem; }
+
+.countdown { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.countdown div { min-width: 64px; padding: 8px 6px; border: 1px solid var(--zari); border-radius: 6px; display: flex; flex-direction: column; }
+.countdown b { font-family: var(--f-display); font-size: 1.5rem; font-weight: 400; color: var(--ground); font-variant-numeric: tabular-nums; }
+.countdown span { font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+
+h2 { font-family: var(--f-display); font-weight: 400; font-size: 1.1rem; letter-spacing: .18em; color: var(--ground); margin: 0; text-transform: uppercase; }
+
+.events { width: 100%; display: grid; gap: 0; text-align: left; }
+.event { display: grid; grid-template-columns: 92px 1fr; gap: 16px; padding-block: 16px; border-top: 1px dashed rgba(201,161,74,.7); }
+.event:last-child { border-bottom: 1px dashed rgba(201,161,74,.7); }
+.event .when { font-family: var(--f-display); color: var(--ground); line-height: 1.25; }
+.event .when small { display: block; font-family: var(--f-body); font-size: .8rem; color: var(--ink-soft); letter-spacing: 0; }
+.event .what { min-width: 0; }
+.event h3 { margin: 0; font-family: var(--f-body); font-weight: 600; font-size: 1.08rem; color: var(--ink); }
+.event h3 .u { font-family: var(--f-urdu); font-weight: 400; color: var(--emerald); margin-inline-start: 8px; font-size: 1rem; }
+.event p { margin: 2px 0 0; font-size: .95rem; color: var(--ink-soft); }
+
+.venue { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.venue address { font-style: normal; color: var(--ink); max-width: 26em; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--f-display); font-size: .85rem; letter-spacing: .12em;
+  color: var(--paper); background: var(--ground);
+  border: 1px solid var(--zari); border-radius: 999px;
+  padding: 10px 20px; text-decoration: none; cursor: pointer;
+}
+.btn:hover { background: var(--ground-deep); }
+.btn:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--emerald); outline-offset: 2px; }
+.btn.ghost { background: transparent; color: var(--ground); }
+
+.muntazir { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: center; }
+.muntazir ul { list-style: none; margin: 6px 0 0; padding: 0; font-size: .95rem; color: var(--ink); display: grid; gap: 2px; }
+.muntazir > div { min-width: 0; }
+
+.kids {
+  width: 100%; padding: 16px 18px; border-radius: 10px;
+  background: repeating-linear-gradient(135deg, rgba(201,161,74,.10) 0 8px, transparent 8px 16px);
+  border: 1px solid rgba(201,161,74,.6);
+}
+.kids .hindi { font-size: 1.15rem; color: var(--ground); }
+.kids p { margin: 4px 0 0; font-size: .9rem; color: var(--ink-soft); }
+
+form.rsvp { width: 100%; display: grid; gap: 12px; text-align: left; }
+.row { display: grid; grid-template-columns: 1fr 120px; gap: 12px; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); min-width: 0; }
+input, select {
+  font: inherit; font-size: 1rem; letter-spacing: 0; text-transform: none; color: var(--ink);
+  background: #fffdf6; border: 1px solid #d9c49a; border-radius: 6px; padding: 9px 10px; width: 100%;
+}
+fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; }
+fieldset legend { font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px; padding: 0; }
+.check { flex-direction: row; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: .98rem; color: var(--ink); }
+.check input { width: auto; accent-color: var(--ground); }
+.rsvp-out { display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center; }
+.rsvp-out pre { white-space: pre-wrap; font-family: var(--f-body); background: #fffdf6; border: 1px dashed var(--zari); border-radius: 8px; padding: 12px; margin: 0; width: 100%; text-align: left; font-size: .95rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+.closing { display: flex; flex-direction: column; gap: 6px; }
+.closing .ar { font-family: var(--f-arabic); font-size: 1.3rem; color: var(--emerald); direction: rtl; }
+.closing small { color: var(--ink-soft); font-style: italic; }
+
+@media (max-width: 520px) {
+  body { font-size: 16px; padding-block: 24px 40px; }
+  .card { padding: 72px 22px 36px; border-radius: 50% 50% 12px 12px / 120px 120px 12px 12px; }
+  .card::before { border-radius: 50% 50% 6px 6px / 110px 110px 6px 6px; inset: 9px; }
+  .event { grid-template-columns: 74px 1fr; gap: 12px; }
+  .muntazir { grid-template-columns: 1fr; }
+  .row { grid-template-columns: 1fr; }
+  .bismillah { font-size: 1.75rem; }
+}
+</style>
+
+<main class="card">
+  <div class="stack">
+
+    <div class="bismillah" lang="ar">بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>
+
+    <div class="verse">
+      <div class="ar" lang="ar">وَخَلَقْنَاكُمْ أَزْوَاجًا</div>
+      <div class="tr">“And We created you in pairs.”</div>
+      <div class="ref">Surah An-Naba · 78:8</div>
+    </div>
+
+    <svg class="rule" viewBox="0 0 360 18" aria-hidden="true">
+      <line x1="0" y1="9" x2="150" y2="9" stroke="#c9a14a" stroke-width="1"/>
+      <line x1="210" y1="9" x2="360" y2="9" stroke="#c9a14a" stroke-width="1"/>
+      <path d="M180 1 L189 9 L180 17 L171 9 Z" fill="#c9a14a"/>
+      <circle cx="160" cy="9" r="2.5" fill="#c9a14a"/><circle cx="200" cy="9" r="2.5" fill="#c9a14a"/>
+    </svg>
+
+    <div class="lead">
+      <p class="urdu" lang="ur">بصد احترام آپ کو اپنے نورِ نظر کی تقریبِ نکاح میں شرکت کی دعوت دیتے ہیں۔ آپ کی تشریف آوری ہمارے لیے باعثِ مسرت ہوگی۔</p>
+      <p class="hindi" lang="hi">बसद एहतराम आपको अपने नूर-ए-नज़र की तक़रीब-ए-निकाह में शिरकत की दावत देते हैं। आपकी तशरीफ़ आवरी हमारे लिए बाइस-ए-मसर्रत होगी।</p>
+    </div>
+
+    <div class="couple">
+      <span class="eyebrow">Nau-shah · The Groom</span>
+      <h1 class="name">Mohammad Faiz Ansari</h1>
+      <div class="name-urdu" lang="ur">محمد فیض انصاری</div>
+      <p class="parent">B.Tech · son of <b>Janab Haji Abdul Rasheed Ansari Sahab</b><br>Mohalla Dakshin Tola, Mau</p>
+
+      <div class="ampersand" aria-label="with">❁</div>
+
+      <span class="eyebrow">Dulhan · The Bride</span>
+      <h1 class="name">Ayesha Parveen</h1>
+      <div class="name-urdu" lang="ur">عائشہ پروین</div>
+      <p class="parent">M.A. · daughter of <b>Janab Mohammad Shamim Ansari Sahab</b><br>Pura Sofi, Mubarakpur, Azamgarh</p>
+    </div>
+
+    <div class="date-block">
+      <span class="eyebrow">Nikah · Insha’Allah</span>
+      <div class="date-big">Sunday, 22 November 2026</div>
+      <div class="hijri" id="hijri">12 Jumada al-Akhirah 1448</div>
+    </div>
+
+    <div class="countdown" id="countdown" aria-live="polite">
+      <div><b id="cd-d">47</b><span>Din</span></div>
+      <div><b id="cd-h">00</b><span>Ghante</span></div>
+      <div><b id="cd-m">00</b><span>Minute</span></div>
+    </div>
+
+    <h2>Taqreebat · Programme</h2>
+    <div class="events">
+      <div class="event">
+        <div class="when">21 Nov<small>Saturday</small></div>
+        <div class="what">
+          <h3>Mehndi &amp; Manjha <span class="u" lang="ur">مہندی</span></h3>
+          <p>Ba’d namaz-e-Isha, 8:00 pm · Dulhan ka ghar, Pura Sofi, Mubarakpur</p>
+        </div>
+      </div>
+      <div class="event">
+        <div class="when">22 Nov<small>Sunday</small></div>
+        <div class="what">
+          <h3>Baraat &amp; Nikah <span class="u" lang="ur">نکاح</span></h3>
+          <p>Baraat rawana 10:30 am from Mau · Nikah ba’d namaz-e-Zuhr · Dawat-e-taam to follow · Rukhsati ba’d Asr</p>
+        </div>
+      </div>
+      <div class="event">
+        <div class="when">23 Nov<small>Monday</small></div>
+        <div class="what">
+          <h3>Dawat-e-Walima <span class="u" lang="ur">ولیمہ</span></h3>
+          <p>1:00 pm onwards · Ansari Manzil, Dakshin Tola, Mau</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="venue">
+      <h2>Nikah ka Maqaam</h2>
+      <address>Darul Masarrat Marriage Lawn<br>Near Jama Masjid, Pura Sofi, Mubarakpur, Azamgarh (U.P.)</address>
+      <a class="btn ghost" href="https://www.google.com/maps/search/?api=1&query=Pura+Sofi+Mubarakpur+Azamgarh" target="_blank" rel="noopener">Open in Maps ↗</a>
+    </div>
+
+    <svg class="rule" viewBox="0 0 360 18" aria-hidden="true">
+      <line x1="0" y1="9" x2="150" y2="9" stroke="#c9a14a" stroke-width="1"/>
+      <line x1="210" y1="9" x2="360" y2="9" stroke="#c9a14a" stroke-width="1"/>
+      <path d="M180 1 L189 9 L180 17 L171 9 Z" fill="#c9a14a"/>
+      <circle cx="160" cy="9" r="2.5" fill="#c9a14a"/><circle cx="200" cy="9" r="2.5" fill="#c9a14a"/>
+    </svg>
+
+    <div class="muntazir">
+      <div>
+        <span class="eyebrow">Muntazir · Awaiting you</span>
+        <ul>
+          <li>Haji Abdul Rasheed Ansari</li>
+          <li>Abdul Majeed Ansari (Chacha)</li>
+          <li>Mohammad Danish, Mohammad Arif</li>
+          <li>&amp; tamaam ahl-e-khana</li>
+        </ul>
+      </div>
+      <div>
+        <span class="eyebrow">Dua-go · With prayers</span>
+        <ul>
+          <li>Mohammad Shamim Ansari</li>
+          <li>Hafiz Naseem Ahmad (Mamu)</li>
+          <li>Shabana, Rukhsar</li>
+          <li>&amp; tamaam rishtedaar</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="kids">
+      <div class="hindi" lang="hi">“मेरे चाचू की शादी में ज़रूर-ज़रूर आना!”</div>
+      <p>— Nanhe mehmaan: Zoya, Ayaan, Huzaifa &amp; Inaya</p>
+    </div>
+
+    <h2>Tashreef Layenge? · RSVP</h2>
+    <form class="rsvp" id="rsvp" novalidate>
+      <div class="row">
+        <label for="r-name">Aapka naam
+          <input id="r-name" name="name" type="text" placeholder="e.g. Shakeel Ahmad, Ghosi" autocomplete="name" required>
+        </label>
+        <label for="r-count">Kitne log
+          <select id="r-count" name="count">
+            <option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6+</option>
+          </select>
+        </label>
+      </div>
+      <fieldset>
+        <legend>Kis taqreeb mein aayenge</legend>
+        <label class="check" for="r-e1"><input id="r-e1" type="checkbox" value="Mehndi"> Mehndi</label>
+        <label class="check" for="r-e2"><input id="r-e2" type="checkbox" value="Nikah" checked> Nikah</label>
+        <label class="check" for="r-e3"><input id="r-e3" type="checkbox" value="Walima" checked> Walima</label>
+      </fieldset>
+      <div class="actions"><button class="btn" type="submit">Prepare RSVP</button></div>
+    </form>
+    <div class="rsvp-out" id="rsvp-out" hidden>
+      <pre id="rsvp-msg"></pre>
+      <div class="actions">
+        <a class="btn" id="rsvp-wa" href="#" target="_blank" rel="noopener" hidden>Send on WhatsApp ↗</a>
+        <button class="btn ghost" type="button" id="rsvp-copy">Copy message</button>
+      </div>
+      <small id="rsvp-note" class="parent"></small>
+    </div>
+
+    <div class="closing">
+      <div class="ar" lang="ar">بَارَكَ ٱللَّٰهُ لَكُمَا وَبَارَكَ عَلَيْكُمَا وَجَمَعَ بَيْنَكُمَا فِي خَيْرٍ</div>
+      <small>“May Allah bless you both, shower His blessings upon you, and unite you in goodness.”</small>
+    </div>
+
+  </div>
+</main>
+
+<script>
+// Family's WhatsApp number for RSVPs, with country code and no "+" (e.g. "919876543210").
+// Leave empty to show only the "Copy message" button.
+var RSVP_WHATSAPP = "";
+var NIKAH_AT = new Date("2026-11-22T13:00:00+05:30");
+
+(function hijri() {
+  try {
+    var f = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Kolkata" });
+    var p = {};
+    f.formatToParts(NIKAH_AT).forEach(function (x) { p[x.type] = x.value; });
+    if (p.day && p.month && p.year) document.getElementById("hijri").textContent = p.day + " " + p.month + " " + p.year.replace(/\D/g, "") + " AH (approx.)";
+  } catch (e) { /* keep the printed date */ }
+})();
+
+function tick() {
+  var ms = NIKAH_AT - Date.now();
+  if (ms <= 0) {
+    document.getElementById("countdown").innerHTML = '<div style="padding:8px 16px"><b>Mubarak ho!</b><span>Nikah ho gaya</span></div>';
+    return;
+  }
+  var m = Math.floor(ms / 60000);
+  document.getElementById("cd-d").textContent = Math.floor(m / 1440);
+  document.getElementById("cd-h").textContent = String(Math.floor(m / 60) % 24).padStart(2, "0");
+  document.getElementById("cd-m").textContent = String(m % 60).padStart(2, "0");
+  setTimeout(tick, 30000);
+}
+tick();
+
+var form = document.getElementById("rsvp");
+var out = document.getElementById("rsvp-out");
+var msgEl = document.getElementById("rsvp-msg");
+var wa = document.getElementById("rsvp-wa");
+var note = document.getElementById("rsvp-note");
+
+form.addEventListener("submit", function (e) {
+  e.preventDefault();
+  var nameInput = document.getElementById("r-name");
+  var name = nameInput.value.trim();
+  if (!name) { nameInput.focus(); nameInput.placeholder = "Pehle apna naam likhiye"; return; }
+  var events = Array.prototype.slice.call(form.querySelectorAll("fieldset input:checked")).map(function (i) { return i.value; });
+  var count = document.getElementById("r-count").value;
+  var text = "Assalamu Alaikum,\n" + name + " — Faiz & Ayesha ki shaadi mein " +
+    (events.length ? events.join(", ") : "shirkat nahi kar paayenge, dua-e-khair ke saath") +
+    (events.length ? " mein " + count + " log Insha'Allah aayenge." : ".") +
+    "\nMubarakbaad!";
+  msgEl.textContent = text;
+  if (RSVP_WHATSAPP) {
+    wa.href = "https://wa.me/" + RSVP_WHATSAPP + "?text=" + encodeURIComponent(text);
+    wa.hidden = false;
+    note.textContent = "";
+  } else {
+    wa.hidden = true;
+    note.textContent = "Copy this message and send it to the family on WhatsApp.";
+  }
+  out.hidden = false;
+});
+
+document.getElementById("rsvp-copy").addEventListener("click", function () {
+  var btn = this;
+  function selectText() {
+    var r = document.createRange(); r.selectNodeContents(msgEl);
+    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+    btn.textContent = "Selected, press copy";
+  }
+  try {
+    navigator.clipboard.writeText(msgEl.textContent).then(function () { btn.textContent = "Copied"; }, selectText);
+  } catch (e) { selectText(); }
+});
+</script>
