@@ -102,6 +102,8 @@ body {
 .pair { display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 0; }
 .name { margin: 0; font-family: var(--f-script); font-style: italic; font-weight: 500; font-size: clamp(2.2rem, 8.5vw, 3rem); line-height: 1.25; padding-inline: .1em; }
 .name-urdu { font-family: var(--f-urdu); font-size: 1.2rem; line-height: 1.8; color: var(--ink-soft); direction: rtl; margin-top: 10px; }
+.parent { margin: 4px 0 0; font-size: .88rem; font-style: italic; color: var(--ink-soft); }
+.parent b { font-style: normal; font-weight: 500; color: var(--ink); }
 .weds { font-family: var(--f-caps); font-size: .78rem; letter-spacing: .3em; color: var(--gold); margin-block: 6px; display: flex; align-items: center; gap: 10px; }
 .weds::before, .weds::after { content: ""; width: 34px; height: 1px; background: var(--gold-light); }
 .date-tag { margin-top: 10px; font-family: var(--f-caps); font-size: .86rem; letter-spacing: .12em; color: var(--ink); padding: 6px 16px; border-top: 1px solid var(--gold-light); border-bottom: 1px solid var(--gold-light); }
@@ -345,6 +347,7 @@ body.gate-up canvas.sky { z-index: 35; }
       <div class="pair">
         <h1 class="name foil">Seraj Khan</h1>
         <div class="name-urdu" lang="ur">سراج خان</div>
+        <p class="parent">son of <b>Mohd Abul Hasan Khan</b></p>
         <div class="weds">weds</div>
         <h1 class="name foil">Nargish</h1>
         <div class="name-urdu" lang="ur">نرگس</div>
@@ -354,6 +357,7 @@ body.gate-up canvas.sky { z-index: 35; }
       <div class="pair">
         <h1 class="name foil">Fahim Khan</h1>
         <div class="name-urdu" lang="ur">فہیم خان</div>
+        <p class="parent">son of <b>Marhum Tahir Khan</b></p>
         <div class="weds">weds</div>
         <h1 class="name foil">Shahiba</h1>
         <div class="name-urdu" lang="ur">شاہیبہ</div>
