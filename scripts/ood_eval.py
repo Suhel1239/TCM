@@ -7,8 +7,13 @@
         --pred YOLO26=preds/YOLO26.json --pred RT-DETR=preds/RT-DETR.json \
         --thr 0.15 --ref GroundingDINO --out ood_results
 
-Per model and per acupoint (IoU 0.5 for P/R/F1, COCO greedy matching, 101-point AP):
-  AP50, AP75, AP50:95, Precision, Recall, F1 at a fixed score threshold (--thr, or NAME=thr)
+Matching (--match):
+  iou     box overlap, COCO-style: hit if IoU >= 0.5   -> AP50, AP75, AP50:95
+  center  point localisation: hit if the predicted box CENTRE is within alpha x (diagonal of the
+          true box) of the true centre                -> AP@a0.5 (main), AP@a0.25 (strict), AP@a0.25:1.0
+  both    (default) runs both and writes <out>/iou and <out>/center
+Per model and per acupoint (COCO greedy matching, 101-point AP):
+  AP at three strictness levels, Precision, Recall, F1 at a fixed score threshold (--thr, or NAME=thr)
 Whole model:
   MACRO  = mean over the points  (MACRO AP = the usual mAP)
   MICRO  = all points pooled (TP / FP / FN counts)
@@ -32,6 +37,15 @@ import numpy as np
 
 DEFAULT_CLASSES = ["yuji", "laogong", "zhongchong", "shaofu"]
 IOU_THRS = np.round(np.arange(0.50, 1.00, 0.05), 2)
+CENTER_ALPHAS = np.array([0.5, 0.25, 0.75, 1.0])   # first = main level, second = strict level
+
+MODES = {
+    # levels: hit thresholds (main first, strict second); names: (main, strict, mean) AP labels
+    "iou": {"levels": IOU_THRS, "main": 0, "strict": 5, "names": ("AP50", "AP75", "AP50:95"),
+            "hit": "IoU >= 0.5"},
+    "center": {"levels": CENTER_ALPHAS, "main": 0, "strict": 1, "names": ("AP@a0.5", "AP@a0.25", "AP@a0.25:1.0"),
+               "hit": "centre distance <= 0.5 x true-box diagonal"},
+}
 
 
 # ───────────────────────────── matching / AP ─────────────────────────────
@@ -49,17 +63,33 @@ def iou_matrix(p: np.ndarray, g: np.ndarray) -> np.ndarray:
     return inter / np.maximum(ap[:, None] + ag[None, :] - inter, 1e-12)
 
 
-def match(pred_boxes, pred_scores, gt_boxes) -> np.ndarray:
-    """greedy, highest score first; returns tp flags (n_thr, N) for every IoU threshold."""
+def center_dist_matrix(p: np.ndarray, g: np.ndarray) -> np.ndarray:
+    """distance between box centres divided by the diagonal of the TRUE box -> (N,M)"""
+    if len(p) == 0 or len(g) == 0:
+        return np.zeros((len(p), len(g)))
+    pc = (p[:, :2] + p[:, 2:]) / 2
+    gc = (g[:, :2] + g[:, 2:]) / 2
+    diag = np.maximum(np.hypot(g[:, 2] - g[:, 0], g[:, 3] - g[:, 1]), 1e-6)
+    return np.linalg.norm(pc[:, None, :] - gc[None, :, :], axis=2) / diag[None, :]
+
+
+def match(pred_boxes, pred_scores, gt_boxes, mode: str = "iou") -> np.ndarray:
+    """greedy, highest score first; returns tp flags (n_levels, N) for every strictness level.
+    iou: similarity = IoU, hit if >= level.  center: similarity = -normalised distance, hit if <= level."""
     order = np.argsort(-pred_scores, kind="mergesort")
-    ious = iou_matrix(pred_boxes[order], gt_boxes)
-    tp = np.zeros((len(IOU_THRS), len(order)), dtype=bool)
-    for t, thr in enumerate(IOU_THRS):
+    if mode == "iou":
+        sim = iou_matrix(pred_boxes[order], gt_boxes)
+        thrs = MODES["iou"]["levels"]
+    else:
+        sim = -center_dist_matrix(pred_boxes[order], gt_boxes)
+        thrs = -MODES["center"]["levels"]
+    tp = np.zeros((len(thrs), len(order)), dtype=bool)
+    for t, thr in enumerate(thrs):
         used = np.zeros(len(gt_boxes), dtype=bool)
         for i in range(len(order)):
             if len(gt_boxes) == 0:
                 break
-            cand = np.where(~used, ious[i], -1.0)
+            cand = np.where(~used, sim[i], -np.inf)
             j = int(np.argmax(cand))
             if cand[j] >= thr:
                 used[j] = True
@@ -130,8 +160,8 @@ def load_pred(path: str, name_of: dict, classes: list[str]):
     return pred
 
 
-def per_image_records(image_ids, gt, pred, classes):
-    """rec[img][cls] = (scores (N,), tp (n_thr,N), n_gt)"""
+def per_image_records(image_ids, gt, pred, classes, mode: str = "iou"):
+    """rec[img][cls] = (scores (N,), tp (n_levels,N), n_gt)"""
     rec = {}
     for im in image_ids:
         rec[im] = {}
@@ -139,27 +169,30 @@ def per_image_records(image_ids, gt, pred, classes):
             g = np.array(gt[im][c], float).reshape(-1, 4) if im in gt else np.zeros((0, 4))
             pb, ps = pred[im][c] if im in pred else ([], [])
             pb, ps = np.array(pb, float).reshape(-1, 4), np.array(ps, float)
-            rec[im][c] = (ps, match(pb, ps, g), len(g))
+            rec[im][c] = (ps, match(pb, ps, g, mode), len(g))
     return rec
 
 
-def metrics(rec, images, classes, thr: float) -> dict:
+def metrics(rec, images, classes, thr: float, mode: str = "iou") -> dict:
     """images may contain repeats (bootstrap)."""
+    cfg = MODES[mode]
+    n_lv = len(cfg["levels"])
     out = {"per_class": {}}
     tot_tp = tot_pred = tot_gt = 0
     for c in classes:
         s = np.concatenate([rec[i][c][0] for i in images]) if images else np.zeros(0)
-        tp = np.concatenate([rec[i][c][1] for i in images], axis=1) if images else np.zeros((len(IOU_THRS), 0), bool)
+        tp = np.concatenate([rec[i][c][1] for i in images], axis=1) if images else np.zeros((n_lv, 0), bool)
         n_gt = int(sum(rec[i][c][2] for i in images))
-        aps = [ap_101(s, tp[t], n_gt) for t in range(len(IOU_THRS))]
+        aps = [ap_101(s, tp[t], n_gt) for t in range(n_lv)]
         keep = s >= thr
-        k_tp, k_pred = int(tp[0][keep].sum()), int(keep.sum())
+        k_tp, k_pred = int(tp[cfg["main"]][keep].sum()), int(keep.sum())
         p, r, f = prf(k_tp, k_pred, n_gt)
-        out["per_class"][c] = {"n_gt": n_gt, "AP50": aps[0], "AP75": aps[5], "AP50_95": float(np.nanmean(aps)),
+        out["per_class"][c] = {"n_gt": n_gt, "AP": aps[cfg["main"]], "AP_strict": aps[cfg["strict"]],
+                               "AP_mean": float(np.nanmean(aps)),
                                "P": p, "R": r, "F1": f, "TP": k_tp, "FP": k_pred - k_tp, "FN": n_gt - k_tp}
         tot_tp, tot_pred, tot_gt = tot_tp + k_tp, tot_pred + k_pred, tot_gt + n_gt
     pc = out["per_class"].values()
-    out["macro"] = {k: float(np.nanmean([d[k] for d in pc])) for k in ("AP50", "AP75", "AP50_95", "P", "R", "F1")}
+    out["macro"] = {k: float(np.nanmean([d[k] for d in pc])) for k in ("AP", "AP_strict", "AP_mean", "P", "R", "F1")}
     p, r, f = prf(tot_tp, tot_pred, tot_gt)
     out["micro"] = {"P": p, "R": r, "F1": f, "TP": tot_tp, "FP": tot_pred - tot_tp, "FN": tot_gt - tot_tp,
                     "n_gt": tot_gt}
@@ -167,11 +200,11 @@ def metrics(rec, images, classes, thr: float) -> dict:
 
 
 def headline(m) -> dict:
-    return {"mAP50": m["macro"]["AP50"], "mAP75": m["macro"]["AP75"], "mAP50_95": m["macro"]["AP50_95"],
+    return {"mAP": m["macro"]["AP"], "mAP_strict": m["macro"]["AP_strict"], "mAP_mean": m["macro"]["AP_mean"],
             "P": m["micro"]["P"], "R": m["micro"]["R"], "F1": m["micro"]["F1"]}
 
 
-def bootstrap(recs: dict, image_ids, classes, thrs: dict, n: int, seed: int = 0):
+def bootstrap(recs: dict, image_ids, classes, thrs: dict, n: int, seed: int = 0, mode: str = "iou"):
     """same resampled image sets for every model -> per-model CIs and paired differences."""
     rng = np.random.default_rng(seed)
     draws = {name: defaultdict(list) for name in recs}
@@ -179,7 +212,7 @@ def bootstrap(recs: dict, image_ids, classes, thrs: dict, n: int, seed: int = 0)
     for _ in range(n):
         sample = [ids[k] for k in rng.integers(0, len(ids), len(ids))]
         for name, rec in recs.items():
-            for k, v in headline(metrics(rec, sample, classes, thrs[name])).items():
+            for k, v in headline(metrics(rec, sample, classes, thrs[name], mode)).items():
                 draws[name][k].append(v)
     return {name: {k: np.array(v) for k, v in d.items()} for name, d in draws.items()}
 
@@ -232,6 +265,85 @@ def fmt(v, ci_=None):
     return s if ci_ is None else f"{s} [{ci_[0]:.3f}, {ci_[1]:.3f}]"
 
 
+def report(mode, models, recs, res, boot, thrs, classes, ref, out_dir, n_boot):
+    """print + save the tables of one matching mode"""
+    cfg = MODES[mode]
+    n_main, n_strict, n_mean = cfg["names"]
+    os.makedirs(out_dir, exist_ok=True)
+    title = "BOX OVERLAP (IoU)" if mode == "iou" else "POINT LOCALISATION (box centre)"
+    print(f"\n{'#' * 100}\n#  {title}: a prediction is correct if {cfg['hit']}\n{'#' * 100}")
+
+    # ── per class
+    rows = []
+    print(f"\n=== Per acupoint (P/R/F1: {cfg['hit']}) ===")
+    print(f"  {'model':<15}{'point':<12}{'GT':>5}{n_main:>9}{n_strict:>10}{n_mean:>14}"
+          f"{'P':>8}{'R':>8}{'F1':>8}{'TP':>5}{'FP':>5}{'FN':>5}")
+    for name in models:
+        for c in classes:
+            d = res[name]["per_class"][c]
+            print(f"  {name:<15}{c:<12}{d['n_gt']:>5}{d['AP']:>9.3f}{d['AP_strict']:>10.3f}{d['AP_mean']:>14.3f}"
+                  f"{d['P']:>8.3f}{d['R']:>8.3f}{d['F1']:>8.3f}{d['TP']:>5}{d['FP']:>5}{d['FN']:>5}")
+            rows.append({"model": name, "point": c, "score_thr": thrs[name], "n_gt": d["n_gt"],
+                         n_main: d["AP"], n_strict: d["AP_strict"], n_mean: d["AP_mean"],
+                         **{k: d[k] for k in ("P", "R", "F1", "TP", "FP", "FN")}})
+    with open(os.path.join(out_dir, "per_class.csv"), "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+
+    # ── whole model
+    label = {"mAP": "m" + n_main, "mAP_strict": "m" + n_strict, "mAP_mean": "m" + n_mean,
+             "P": "Precision", "R": "Recall", "F1": "F1"}
+    print("\n=== Whole model (mAP = mean over the 4 points; P/R/F1 = all points pooled) ===")
+    if boot:
+        print(f"  95% CI: bootstrap over images, {n_boot} resamples")
+    keys = ["mAP", "mAP_strict", "mAP_mean", "P", "R", "F1"]
+    summ = []
+    md = [f"Matching: a prediction is correct if {cfg['hit']}.", "",
+          f"| Model | thr | {label['mAP']} | {label['mAP_mean']} | Precision | Recall | F1 |",
+          "|---|---|---|---|---|---|---|"]
+    for name in models:
+        h = headline(res[name])
+        cis = {k: ci(boot[name][k]) for k in keys} if boot else {}
+        mi = res[name]["micro"]
+        print(f"  {name:<15} thr {thrs[name]:.2f}")
+        for k in keys:
+            print(f"      {label[k]:<15} {fmt(h[k], cis.get(k))}")
+        print(f"      counts          TP {mi['TP']}  FP {mi['FP']}  FN {mi['FN']}  (of {mi['n_gt']} GT points)")
+        summ.append({"model": name, "score_thr": thrs[name], **{label[k]: h[k] for k in keys},
+                     **{f"{label[k]}_lo": cis[k][0] for k in cis}, **{f"{label[k]}_hi": cis[k][1] for k in cis},
+                     "TP": mi["TP"], "FP": mi["FP"], "FN": mi["FN"], "n_gt": mi["n_gt"]})
+        cell = (lambda k: f"{h[k]:.3f} ({cis[k][0]:.3f}–{cis[k][1]:.3f})") if boot else (lambda k: f"{h[k]:.3f}")
+        md.append(f"| {name} | {thrs[name]:.2f} | {cell('mAP')} | {cell('mAP_mean')} | {cell('P')} "
+                  f"| {cell('R')} | {cell('F1')} |")
+    with open(os.path.join(out_dir, "summary.csv"), "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(summ[0]))
+        w.writeheader()
+        w.writerows(summ)
+
+    # ── paired differences vs reference
+    if boot and ref:
+        print(f"\n=== Paired bootstrap difference vs {ref} (model - ref; CI excluding 0 = significant *) ===")
+        md += ["", f"Difference vs {ref} (95% paired bootstrap CI, * = significant):", "",
+               f"| Model | Δ{label['mAP']} | Δ{label['mAP_mean']} | ΔF1 |", "|---|---|---|---|"]
+        for name in models:
+            if name == ref:
+                continue
+            cells = []
+            line = f"  {name:<15}"
+            for k in ("mAP", "mAP_mean", "F1"):
+                diff = headline(res[name])[k] - headline(res[ref])[k]
+                lo, hi = ci(boot[name][k] - boot[ref][k])
+                sig = "*" if (lo > 0 or hi < 0) else " "
+                line += f"  Δ{label[k]} {diff:+.3f} [{lo:+.3f}, {hi:+.3f}]{sig}"
+                cells.append(f"{diff:+.3f} ({lo:+.3f} to {hi:+.3f}){sig.strip()}")
+            print(line)
+            md.append(f"| {name} | " + " | ".join(cells) + " |")
+    with open(os.path.join(out_dir, "summary.md"), "w") as f:
+        f.write("\n".join(md) + "\n")
+    print(f"\nsaved {out_dir}/summary.csv, per_class.csv, summary.md")
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ann", required=True)
@@ -239,6 +351,8 @@ def main(argv=None) -> int:
     ap.add_argument("--classes", nargs="+", default=DEFAULT_CLASSES)
     ap.add_argument("--thr", action="append", default=[],
                     help="score threshold for P/R/F1: one value for all, or NAME=value (repeatable)")
+    ap.add_argument("--match", choices=["iou", "center", "both"], default="both",
+                    help="iou = box overlap (COCO); center = predicted centre near the true centre; both = report both")
     ap.add_argument("--bootstrap", type=int, default=1000, help="0 = no CIs")
     ap.add_argument("--ref", help="reference model for paired differences")
     ap.add_argument("--out", default="ood_results")
@@ -247,6 +361,9 @@ def main(argv=None) -> int:
     classes = [c.lower() for c in args.classes]
     data, name_of, gt = load_gt(args.ann, classes)
     image_ids = [im["id"] for im in data["images"]]
+    bad = [p for p in args.pred if "=" not in p]
+    if bad:
+        raise SystemExit(f"--pred must be NAME=path, e.g. --pred GroundingDINO=preds.json (got {bad})")
     models = dict(p.split("=", 1) for p in args.pred)
     thrs = {m: 0.15 for m in models}
     for t in args.thr:
@@ -260,76 +377,17 @@ def main(argv=None) -> int:
 
     os.makedirs(args.out, exist_ok=True)
     describe(data, gt, classes)
+    preds = {name: load_pred(path, name_of, classes) for name, path in models.items()}
 
-    recs, res = {}, {}
-    for name, path in models.items():
-        recs[name] = per_image_records(image_ids, gt, load_pred(path, name_of, classes), classes)
-        res[name] = metrics(recs[name], image_ids, classes, thrs[name])
-    boot = bootstrap(recs, image_ids, classes, thrs, args.bootstrap) if args.bootstrap else None
-
-    # ── per class
-    rows = []
-    print("\n=== Per acupoint (IoU 0.5 for P/R/F1) ===")
-    print(f"  {'model':<15}{'point':<12}{'GT':>5}{'AP50':>8}{'AP75':>8}{'AP50:95':>9}"
-          f"{'P':>8}{'R':>8}{'F1':>8}{'TP':>5}{'FP':>5}{'FN':>5}")
-    for name in models:
-        for c in classes:
-            d = res[name]["per_class"][c]
-            print(f"  {name:<15}{c:<12}{d['n_gt']:>5}{d['AP50']:>8.3f}{d['AP75']:>8.3f}{d['AP50_95']:>9.3f}"
-                  f"{d['P']:>8.3f}{d['R']:>8.3f}{d['F1']:>8.3f}{d['TP']:>5}{d['FP']:>5}{d['FN']:>5}")
-            rows.append({"model": name, "point": c, "score_thr": thrs[name], **d})
-    with open(os.path.join(args.out, "per_class.csv"), "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(rows[0]))
-        w.writeheader()
-        w.writerows(rows)
-
-    # ── whole model
-    print("\n=== Whole model (mAP = macro mean over points; P/R/F1 = micro, all points pooled) ===")
-    if boot:
-        print(f"  95% CI: bootstrap over images, {args.bootstrap} resamples")
-    keys = ["mAP50", "mAP75", "mAP50_95", "P", "R", "F1"]
-    summ = []
-    md = ["| Model | thr | mAP50 | mAP50:95 | Precision | Recall | F1 |", "|---|---|---|---|---|---|---|"]
-    for name in models:
-        h = headline(res[name])
-        cis = {k: ci(boot[name][k]) for k in keys} if boot else {}
-        mi = res[name]["micro"]
-        print(f"  {name:<15} thr {thrs[name]:.2f}")
-        for k in keys:
-            print(f"      {k:<9} {fmt(h[k], cis.get(k))}")
-        print(f"      counts    TP {mi['TP']}  FP {mi['FP']}  FN {mi['FN']}  (of {mi['n_gt']} GT points)")
-        summ.append({"model": name, "score_thr": thrs[name], **h,
-                     **{f"{k}_lo": cis[k][0] for k in cis}, **{f"{k}_hi": cis[k][1] for k in cis},
-                     "TP": mi["TP"], "FP": mi["FP"], "FN": mi["FN"], "n_gt": mi["n_gt"]})
-        cell = (lambda k: f"{h[k]:.3f} ({cis[k][0]:.3f}–{cis[k][1]:.3f})") if boot else (lambda k: f"{h[k]:.3f}")
-        md.append(f"| {name} | {thrs[name]:.2f} | {cell('mAP50')} | {cell('mAP50_95')} | {cell('P')} "
-                  f"| {cell('R')} | {cell('F1')} |")
-    with open(os.path.join(args.out, "summary.csv"), "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(summ[0]))
-        w.writeheader()
-        w.writerows(summ)
-
-    # ── paired differences vs reference
-    if boot and args.ref:
-        print(f"\n=== Paired bootstrap difference vs {args.ref} (model - ref; CI excluding 0 = significant) ===")
-        md += ["", f"Difference vs {args.ref} (95% paired bootstrap CI):", "",
-               "| Model | ΔmAP50 | ΔmAP50:95 | ΔF1 |", "|---|---|---|---|"]
+    modes = ["iou", "center"] if args.match == "both" else [args.match]
+    for mode in modes:
+        recs, res = {}, {}
         for name in models:
-            if name == args.ref:
-                continue
-            cells = []
-            line = f"  {name:<15}"
-            for k in ("mAP50", "mAP50_95", "F1"):
-                diff = headline(res[name])[k] - headline(res[args.ref])[k]
-                lo, hi = ci(boot[name][k] - boot[args.ref][k])
-                sig = "*" if (lo > 0 or hi < 0) else " "
-                line += f"  Δ{k} {diff:+.3f} [{lo:+.3f}, {hi:+.3f}]{sig}"
-                cells.append(f"{diff:+.3f} ({lo:+.3f} to {hi:+.3f}){sig.strip()}")
-            print(line)
-            md.append(f"| {name} | " + " | ".join(cells) + " |")
-    with open(os.path.join(args.out, "summary.md"), "w") as f:
-        f.write("\n".join(md) + "\n")
-    print(f"\nsaved {args.out}/summary.csv, per_class.csv, summary.md")
+            recs[name] = per_image_records(image_ids, gt, preds[name], classes, mode)
+            res[name] = metrics(recs[name], image_ids, classes, thrs[name], mode)
+        boot = bootstrap(recs, image_ids, classes, thrs, args.bootstrap, mode=mode) if args.bootstrap else None
+        out_dir = os.path.join(args.out, mode) if len(modes) > 1 else args.out
+        report(mode, models, recs, res, boot, thrs, classes, args.ref, out_dir, args.bootstrap)
     return 0
 
 

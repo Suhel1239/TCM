@@ -43,7 +43,8 @@ def preds_from(gt, shift=0.0, drop_every=0, fp=False, seed=1):
 def run(tmp_path, preds, extra=()):
     gt = make_gt()
     (tmp_path / "gt.json").write_text(json.dumps(gt))
-    args = ["--ann", str(tmp_path / "gt.json"), "--out", str(tmp_path / "out"), "--bootstrap", "50"]
+    args = ["--ann", str(tmp_path / "gt.json"), "--out", str(tmp_path / "out"), "--bootstrap", "50",
+            "--match", "iou"]
     for name, p in preds.items():
         (tmp_path / f"{name}.json").write_text(json.dumps(p(gt)))
         args += ["--pred", f"{name}={tmp_path / f'{name}.json'}"]
@@ -78,8 +79,8 @@ def test_matches_pycocotools(tmp_path):
     pr = ood_eval.load_pred(str(tmp_path / "p.json"), name_of, ood_eval.DEFAULT_CLASSES)
     rec = ood_eval.per_image_records([im["id"] for im in gt["images"]], g, pr, ood_eval.DEFAULT_CLASSES)
     m = ood_eval.metrics(rec, list(rec), ood_eval.DEFAULT_CLASSES, 0.15)
-    assert m["macro"]["AP50"] == pytest.approx(e.stats[1], abs=0.01)
-    assert m["macro"]["AP50_95"] == pytest.approx(e.stats[0], abs=0.01)
+    assert m["macro"]["AP"] == pytest.approx(e.stats[1], abs=0.01)
+    assert m["macro"]["AP_mean"] == pytest.approx(e.stats[0], abs=0.01)
 
 
 def test_reads_full_coco_json_with_scores(tmp_path):
@@ -88,3 +89,30 @@ def test_reads_full_coco_json_with_scores(tmp_path):
         return {**gt, "annotations": [{**a, "id": i + 1, "iscrowd": 0} for i, a in enumerate(r)]}
     _, rows = run(tmp_path, {"cocojson": as_coco})
     assert float(rows["cocojson"]["mAP50"]) == pytest.approx(1.0)
+
+
+def test_center_mode_counts_shifted_boxes(tmp_path):
+    """boxes shifted by 30% of their width fail IoU>=0.5 but their centre is close -> hit in center mode"""
+    gt = make_gt()
+    (tmp_path / "gt.json").write_text(json.dumps(gt))
+    (tmp_path / "p.json").write_text(json.dumps(preds_from(gt, shift=0.6)))
+    out = tmp_path / "out"
+    assert ood_eval.main(["--ann", str(tmp_path / "gt.json"), "--pred", f"M={tmp_path / 'p.json'}",
+                          "--bootstrap", "20", "--out", str(out)]) == 0
+    iou = next(__import__("csv").DictReader(open(out / "iou" / "summary.csv")))
+    cen = next(__import__("csv").DictReader(open(out / "center" / "summary.csv")))
+    assert float(iou["mAP50"]) < 0.1
+    assert float(cen["mAP@a0.5"]) == pytest.approx(1.0) and float(cen["F1"]) == pytest.approx(1.0)
+
+
+def test_center_distance_normalised_by_gt_diagonal():
+    g = np.array([[0, 0, 30, 40.0]])            # diagonal 50
+    p = np.array([[10, 0, 40, 40.0]])           # centre shifted 10 px
+    assert ood_eval.center_dist_matrix(p, g)[0, 0] == pytest.approx(0.2)
+
+
+def test_pred_without_name_gives_clear_error(tmp_path):
+    gt = make_gt()
+    (tmp_path / "gt.json").write_text(json.dumps(gt))
+    with pytest.raises(SystemExit, match="NAME=path"):
+        ood_eval.main(["--ann", str(tmp_path / "gt.json"), "--pred", "preds.json"])
