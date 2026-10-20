@@ -110,7 +110,16 @@ def load_gt(path: str, classes: list[str]):
 
 def load_pred(path: str, name_of: dict, classes: list[str]):
     obj = json.load(open(path))
-    res = obj["results"] if isinstance(obj, dict) else obj
+    if isinstance(obj, list):                      # COCO results list
+        res = obj
+    elif "results" in obj:                         # ood_predict.py output
+        res = obj["results"]
+    else:                                          # full COCO json whose annotations carry a "score"
+        res = obj["annotations"]
+    if res and any("score" not in r for r in res):
+        print(f"WARNING: {path}: predictions without 'score' are treated as score 1.0 - AP is not meaningful",
+              file=sys.stderr)
+        res = [{**r, "score": r.get("score", 1.0)} for r in res]
     pred = defaultdict(lambda: {c: ([], []) for c in classes})
     for r in res:
         c = name_of.get(r["category_id"])

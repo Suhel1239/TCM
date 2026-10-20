@@ -80,3 +80,11 @@ def test_matches_pycocotools(tmp_path):
     m = ood_eval.metrics(rec, list(rec), ood_eval.DEFAULT_CLASSES, 0.15)
     assert m["macro"]["AP50"] == pytest.approx(e.stats[1], abs=0.01)
     assert m["macro"]["AP50_95"] == pytest.approx(e.stats[0], abs=0.01)
+
+
+def test_reads_full_coco_json_with_scores(tmp_path):
+    def as_coco(gt):
+        r = preds_from(gt)["results"]
+        return {**gt, "annotations": [{**a, "id": i + 1, "iscrowd": 0} for i, a in enumerate(r)]}
+    _, rows = run(tmp_path, {"cocojson": as_coco})
+    assert float(rows["cocojson"]["mAP50"]) == pytest.approx(1.0)
