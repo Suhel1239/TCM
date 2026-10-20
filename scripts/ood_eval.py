@@ -12,8 +12,13 @@ Matching (--match):
   center  point localisation: hit if the predicted box CENTRE is within alpha x (diagonal of the
           true box) of the true centre                -> AP@a0.5 (main), AP@a0.25 (strict), AP@a0.25:1.0
   both    (default) runs both and writes <out>/iou and <out>/center
+Only boxes with score >= --thr (one value, or NAME=thr) are evaluated - for AP AND for P/R/F1.
+Only DETECTED points are evaluated (default): in each image, a point whose predictions all fall
+below the threshold is left out (its true box is not counted as a miss). E.g. if only shaofu
+passes the threshold in an image, only shaofu is scored in that image. The number of true points
+left out is reported as "skipped"; --count-missed counts them as misses (FN) instead.
 Per model and per acupoint (COCO greedy matching, 101-point AP):
-  AP at three strictness levels, Precision, Recall, F1 at a fixed score threshold (--thr, or NAME=thr)
+  AP at three strictness levels, Precision, Recall, F1
 Whole model:
   MACRO  = mean over the points  (MACRO AP = the usual mAP)
   MICRO  = all points pooled (TP / FP / FN counts)
@@ -160,8 +165,12 @@ def load_pred(path: str, name_of: dict, classes: list[str]):
     return pred
 
 
-def per_image_records(image_ids, gt, pred, classes, mode: str = "iou"):
-    """rec[img][cls] = (scores (N,), tp (n_levels,N), n_gt)"""
+def per_image_records(image_ids, gt, pred, classes, mode: str = "iou", thr: float | None = None,
+                      only_detected: bool = False):
+    """rec[img][cls] = (scores (N,), tp (n_levels,N), n_gt, n_skipped)
+    thr: drop predictions below this score BEFORE matching (None = keep all).
+    only_detected: a point with no prediction left in an image is not evaluated in that image
+    (its true boxes are counted in n_skipped, not as misses)."""
     rec = {}
     for im in image_ids:
         rec[im] = {}
@@ -169,7 +178,13 @@ def per_image_records(image_ids, gt, pred, classes, mode: str = "iou"):
             g = np.array(gt[im][c], float).reshape(-1, 4) if im in gt else np.zeros((0, 4))
             pb, ps = pred[im][c] if im in pred else ([], [])
             pb, ps = np.array(pb, float).reshape(-1, 4), np.array(ps, float)
-            rec[im][c] = (ps, match(pb, ps, g, mode), len(g))
+            if thr is not None:
+                keep = ps >= thr
+                pb, ps = pb[keep], ps[keep]
+            skipped = 0
+            if only_detected and len(ps) == 0:
+                skipped, g = len(g), np.zeros((0, 4))
+            rec[im][c] = (ps, match(pb, ps, g, mode), len(g), skipped)
     return rec
 
 
@@ -178,24 +193,30 @@ def metrics(rec, images, classes, thr: float, mode: str = "iou") -> dict:
     cfg = MODES[mode]
     n_lv = len(cfg["levels"])
     out = {"per_class": {}}
-    tot_tp = tot_pred = tot_gt = 0
+    tot_tp = tot_pred = tot_gt = tot_skip = 0
     for c in classes:
         s = np.concatenate([rec[i][c][0] for i in images]) if images else np.zeros(0)
         tp = np.concatenate([rec[i][c][1] for i in images], axis=1) if images else np.zeros((n_lv, 0), bool)
         n_gt = int(sum(rec[i][c][2] for i in images))
+        n_skip = int(sum(rec[i][c][3] for i in images))
         aps = [ap_101(s, tp[t], n_gt) for t in range(n_lv)]
         keep = s >= thr
         k_tp, k_pred = int(tp[cfg["main"]][keep].sum()), int(keep.sum())
         p, r, f = prf(k_tp, k_pred, n_gt)
         out["per_class"][c] = {"n_gt": n_gt, "AP": aps[cfg["main"]], "AP_strict": aps[cfg["strict"]],
-                               "AP_mean": float(np.nanmean(aps)),
-                               "P": p, "R": r, "F1": f, "TP": k_tp, "FP": k_pred - k_tp, "FN": n_gt - k_tp}
+                               "AP_mean": float(np.nanmean(aps)) if n_gt else float("nan"),
+                               "P": p, "R": r, "F1": f, "TP": k_tp, "FP": k_pred - k_tp, "FN": n_gt - k_tp,
+                               "skipped": n_skip}
         tot_tp, tot_pred, tot_gt = tot_tp + k_tp, tot_pred + k_pred, tot_gt + n_gt
+        tot_skip += n_skip
     pc = out["per_class"].values()
-    out["macro"] = {k: float(np.nanmean([d[k] for d in pc])) for k in ("AP", "AP_strict", "AP_mean", "P", "R", "F1")}
+    def nanmean(v):
+        v = [x for x in v if x == x]
+        return float(np.mean(v)) if v else float("nan")
+    out["macro"] = {k: nanmean([d[k] for d in pc]) for k in ("AP", "AP_strict", "AP_mean", "P", "R", "F1")}
     p, r, f = prf(tot_tp, tot_pred, tot_gt)
     out["micro"] = {"P": p, "R": r, "F1": f, "TP": tot_tp, "FP": tot_pred - tot_tp, "FN": tot_gt - tot_tp,
-                    "n_gt": tot_gt}
+                    "n_gt": tot_gt, "skipped": tot_skip}
     return out
 
 
@@ -265,7 +286,7 @@ def fmt(v, ci_=None):
     return s if ci_ is None else f"{s} [{ci_[0]:.3f}, {ci_[1]:.3f}]"
 
 
-def report(mode, models, recs, res, boot, thrs, classes, ref, out_dir, n_boot):
+def report(mode, models, recs, res, boot, thrs, classes, ref, out_dir, n_boot, only_detected=True):
     """print + save the tables of one matching mode"""
     cfg = MODES[mode]
     n_main, n_strict, n_mean = cfg["names"]
@@ -277,15 +298,15 @@ def report(mode, models, recs, res, boot, thrs, classes, ref, out_dir, n_boot):
     rows = []
     print(f"\n=== Per acupoint (P/R/F1: {cfg['hit']}) ===")
     print(f"  {'model':<15}{'point':<12}{'GT':>5}{n_main:>9}{n_strict:>10}{n_mean:>14}"
-          f"{'P':>8}{'R':>8}{'F1':>8}{'TP':>5}{'FP':>5}{'FN':>5}")
+          f"{'P':>8}{'R':>8}{'F1':>8}{'TP':>5}{'FP':>5}{'FN':>5}{'skip':>6}")
     for name in models:
         for c in classes:
             d = res[name]["per_class"][c]
             print(f"  {name:<15}{c:<12}{d['n_gt']:>5}{d['AP']:>9.3f}{d['AP_strict']:>10.3f}{d['AP_mean']:>14.3f}"
-                  f"{d['P']:>8.3f}{d['R']:>8.3f}{d['F1']:>8.3f}{d['TP']:>5}{d['FP']:>5}{d['FN']:>5}")
+                  f"{d['P']:>8.3f}{d['R']:>8.3f}{d['F1']:>8.3f}{d['TP']:>5}{d['FP']:>5}{d['FN']:>5}{d['skipped']:>6}")
             rows.append({"model": name, "point": c, "score_thr": thrs[name], "n_gt": d["n_gt"],
                          n_main: d["AP"], n_strict: d["AP_strict"], n_mean: d["AP_mean"],
-                         **{k: d[k] for k in ("P", "R", "F1", "TP", "FP", "FN")}})
+                         **{k: d[k] for k in ("P", "R", "F1", "TP", "FP", "FN", "skipped")}})
     with open(os.path.join(out_dir, "per_class.csv"), "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0]))
         w.writeheader()
@@ -299,7 +320,10 @@ def report(mode, models, recs, res, boot, thrs, classes, ref, out_dir, n_boot):
         print(f"  95% CI: bootstrap over images, {n_boot} resamples")
     keys = ["mAP", "mAP_strict", "mAP_mean", "P", "R", "F1"]
     summ = []
-    md = [f"Matching: a prediction is correct if {cfg['hit']}.", "",
+    scope = ("only points detected above thr are scored (undetected points skipped)" if only_detected
+             else "undetected points count as misses")
+    print(f"  only boxes with score >= thr are evaluated; {scope}")
+    md = [f"Matching: a prediction is correct if {cfg['hit']}. Only boxes with score >= thr; {scope}.", "",
           f"| Model | thr | {label['mAP']} | {label['mAP_mean']} | Precision | Recall | F1 |",
           "|---|---|---|---|---|---|---|"]
     for name in models:
@@ -309,10 +333,12 @@ def report(mode, models, recs, res, boot, thrs, classes, ref, out_dir, n_boot):
         print(f"  {name:<15} thr {thrs[name]:.2f}")
         for k in keys:
             print(f"      {label[k]:<15} {fmt(h[k], cis.get(k))}")
-        print(f"      counts          TP {mi['TP']}  FP {mi['FP']}  FN {mi['FN']}  (of {mi['n_gt']} GT points)")
+        print(f"      counts          TP {mi['TP']}  FP {mi['FP']}  FN {mi['FN']}  (of {mi['n_gt']} evaluated GT points;"
+              f" {mi['skipped']} undetected points skipped)")
         summ.append({"model": name, "score_thr": thrs[name], **{label[k]: h[k] for k in keys},
                      **{f"{label[k]}_lo": cis[k][0] for k in cis}, **{f"{label[k]}_hi": cis[k][1] for k in cis},
-                     "TP": mi["TP"], "FP": mi["FP"], "FN": mi["FN"], "n_gt": mi["n_gt"]})
+                     "TP": mi["TP"], "FP": mi["FP"], "FN": mi["FN"], "n_gt": mi["n_gt"],
+                     "skipped": mi["skipped"]})
         cell = (lambda k: f"{h[k]:.3f} ({cis[k][0]:.3f}–{cis[k][1]:.3f})") if boot else (lambda k: f"{h[k]:.3f}")
         md.append(f"| {name} | {thrs[name]:.2f} | {cell('mAP')} | {cell('mAP_mean')} | {cell('P')} "
                   f"| {cell('R')} | {cell('F1')} |")
@@ -350,7 +376,10 @@ def main(argv=None) -> int:
     ap.add_argument("--pred", action="append", required=True, metavar="NAME=preds.json")
     ap.add_argument("--classes", nargs="+", default=DEFAULT_CLASSES)
     ap.add_argument("--thr", action="append", default=[],
-                    help="score threshold for P/R/F1: one value for all, or NAME=value (repeatable)")
+                    help="score threshold: only boxes >= thr are evaluated (AP and P/R/F1); one value for all, "
+                         "or NAME=value (repeatable)")
+    ap.add_argument("--count-missed", action="store_true",
+                    help="count points with no box above thr as misses (FN) instead of skipping them")
     ap.add_argument("--match", choices=["iou", "center", "both"], default="both",
                     help="iou = box overlap (COCO); center = predicted centre near the true centre; both = report both")
     ap.add_argument("--bootstrap", type=int, default=1000, help="0 = no CIs")
@@ -383,11 +412,13 @@ def main(argv=None) -> int:
     for mode in modes:
         recs, res = {}, {}
         for name in models:
-            recs[name] = per_image_records(image_ids, gt, preds[name], classes, mode)
+            recs[name] = per_image_records(image_ids, gt, preds[name], classes, mode,
+                                           thr=thrs[name], only_detected=not args.count_missed)
             res[name] = metrics(recs[name], image_ids, classes, thrs[name], mode)
         boot = bootstrap(recs, image_ids, classes, thrs, args.bootstrap, mode=mode) if args.bootstrap else None
         out_dir = os.path.join(args.out, mode) if len(modes) > 1 else args.out
-        report(mode, models, recs, res, boot, thrs, classes, args.ref, out_dir, args.bootstrap)
+        report(mode, models, recs, res, boot, thrs, classes, args.ref, out_dir, args.bootstrap,
+               only_detected=not args.count_missed)
     return 0
 
 

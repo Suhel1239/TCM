@@ -58,8 +58,22 @@ def test_perfect_and_degraded(tmp_path):
                   ["--ref", "perfect"])
     p, b = rows["perfect"], rows["bad"]
     assert float(p["mAP50"]) == pytest.approx(1.0) and float(p["F1"]) == pytest.approx(1.0)
-    assert float(b["mAP50"]) < 0.9 and float(b["F1"]) < 0.9 and int(b["FN"]) > 0 and int(b["FP"]) > 0
+    assert float(b["mAP50"]) < 0.9 and float(b["F1"]) < 0.9 and int(b["FN"]) + int(b["skipped"]) > 0 and int(b["FP"]) > 0
     assert "Difference vs perfect" in (tmp_path / "out" / "summary.md").read_text()
+
+
+def test_threshold_and_only_detected():
+    g = {1: {"yuji": [[0, 0, 10, 10]], "laogong": [], "zhongchong": [], "shaofu": [[50, 50, 60, 60]]}}
+    pred = {1: {"yuji": ([[0, 0, 10, 10]], [0.05]), "laogong": ([], []), "zhongchong": ([], []),
+                "shaofu": ([[50, 50, 60, 60]], [0.9])}}
+    cls = ood_eval.DEFAULT_CLASSES
+    # only shaofu passes 0.15 -> only shaofu scored, yuji skipped
+    m = ood_eval.metrics(ood_eval.per_image_records([1], g, pred, cls, thr=0.15, only_detected=True), [1], cls, 0.15)
+    assert m["micro"]["TP"] == 1 and m["micro"]["FN"] == 0 and m["micro"]["skipped"] == 1
+    assert m["per_class"]["shaofu"]["AP"] == pytest.approx(1.0) and m["per_class"]["yuji"]["AP"] != m["per_class"]["yuji"]["AP"]
+    # --count-missed: yuji is a miss
+    m = ood_eval.metrics(ood_eval.per_image_records([1], g, pred, cls, thr=0.15), [1], cls, 0.15)
+    assert m["micro"]["FN"] == 1 and m["per_class"]["yuji"]["AP"] == 0.0
 
 
 def test_matches_pycocotools(tmp_path):
