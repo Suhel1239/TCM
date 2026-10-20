@@ -12,7 +12,8 @@ Matching (--match):
   center  point localisation: hit if the predicted box CENTRE is within alpha x (diagonal of the
           true box) of the true centre                -> AP@a0.5 (main), AP@a0.25 (strict), AP@a0.25:1.0
   both    (default) runs both and writes <out>/iou and <out>/center
-Only boxes with score >= --thr (one value, or NAME=thr) are evaluated - for AP AND for P/R/F1.
+Only boxes with score >= --thr (one value, or NAME=thr) are evaluated - for AP AND for P/R/F1 -
+and of those only the BEST (highest-score) box of each point in each image (--keep-all keeps all).
 Only DETECTED points are evaluated (default): in each image, a point whose predictions all fall
 below the threshold is left out (its true box is not counted as a miss). E.g. if only shaofu
 passes the threshold in an image, only shaofu is scored in that image. The number of true points
@@ -166,9 +167,10 @@ def load_pred(path: str, name_of: dict, classes: list[str]):
 
 
 def per_image_records(image_ids, gt, pred, classes, mode: str = "iou", thr: float | None = None,
-                      only_detected: bool = False):
+                      only_detected: bool = False, best_only: bool = False):
     """rec[img][cls] = (scores (N,), tp (n_levels,N), n_gt, n_skipped)
     thr: drop predictions below this score BEFORE matching (None = keep all).
+    best_only: then keep only the highest-score box of each point in each image.
     only_detected: a point with no prediction left in an image is not evaluated in that image
     (its true boxes are counted in n_skipped, not as misses)."""
     rec = {}
@@ -181,6 +183,9 @@ def per_image_records(image_ids, gt, pred, classes, mode: str = "iou", thr: floa
             if thr is not None:
                 keep = ps >= thr
                 pb, ps = pb[keep], ps[keep]
+            if best_only and len(ps):
+                b = int(np.argmax(ps))
+                pb, ps = pb[b:b + 1], ps[b:b + 1]
             skipped = 0
             if only_detected and len(ps) == 0:
                 skipped, g = len(g), np.zeros((0, 4))
@@ -286,7 +291,8 @@ def fmt(v, ci_=None):
     return s if ci_ is None else f"{s} [{ci_[0]:.3f}, {ci_[1]:.3f}]"
 
 
-def report(mode, models, recs, res, boot, thrs, classes, ref, out_dir, n_boot, only_detected=True):
+def report(mode, models, recs, res, boot, thrs, classes, ref, out_dir, n_boot, only_detected=True,
+           best_only=True):
     """print + save the tables of one matching mode"""
     cfg = MODES[mode]
     n_main, n_strict, n_mean = cfg["names"]
@@ -322,8 +328,9 @@ def report(mode, models, recs, res, boot, thrs, classes, ref, out_dir, n_boot, o
     summ = []
     scope = ("only points detected above thr are scored (undetected points skipped)" if only_detected
              else "undetected points count as misses")
-    print(f"  only boxes with score >= thr are evaluated; {scope}")
-    md = [f"Matching: a prediction is correct if {cfg['hit']}. Only boxes with score >= thr; {scope}.", "",
+    boxes = "the best box of each point per image with score >= thr" if best_only else "boxes with score >= thr"
+    print(f"  evaluated: {boxes}; {scope}")
+    md = [f"Matching: a prediction is correct if {cfg['hit']}. Evaluated: {boxes}; {scope}.", "",
           f"| Model | thr | {label['mAP']} | {label['mAP_mean']} | Precision | Recall | F1 |",
           "|---|---|---|---|---|---|---|"]
     for name in models:
@@ -378,6 +385,8 @@ def main(argv=None) -> int:
     ap.add_argument("--thr", action="append", default=[],
                     help="score threshold: only boxes >= thr are evaluated (AP and P/R/F1); one value for all, "
                          "or NAME=value (repeatable)")
+    ap.add_argument("--keep-all", action="store_true",
+                    help="evaluate every box >= thr instead of only the best box of each point per image")
     ap.add_argument("--count-missed", action="store_true",
                     help="count points with no box above thr as misses (FN) instead of skipping them")
     ap.add_argument("--match", choices=["iou", "center", "both"], default="both",
@@ -413,12 +422,13 @@ def main(argv=None) -> int:
         recs, res = {}, {}
         for name in models:
             recs[name] = per_image_records(image_ids, gt, preds[name], classes, mode,
-                                           thr=thrs[name], only_detected=not args.count_missed)
+                                           thr=thrs[name], only_detected=not args.count_missed,
+                                           best_only=not args.keep_all)
             res[name] = metrics(recs[name], image_ids, classes, thrs[name], mode)
         boot = bootstrap(recs, image_ids, classes, thrs, args.bootstrap, mode=mode) if args.bootstrap else None
         out_dir = os.path.join(args.out, mode) if len(modes) > 1 else args.out
         report(mode, models, recs, res, boot, thrs, classes, args.ref, out_dir, args.bootstrap,
-               only_detected=not args.count_missed)
+               only_detected=not args.count_missed, best_only=not args.keep_all)
     return 0
 
 

@@ -76,6 +76,17 @@ def test_threshold_and_only_detected():
     assert m["micro"]["FN"] == 1 and m["per_class"]["yuji"]["AP"] == 0.0
 
 
+def test_best_box_only():
+    g = {1: {"yuji": [[0, 0, 10, 10]], "laogong": [], "zhongchong": [], "shaofu": []}}
+    pred = {1: {"yuji": ([[0, 0, 10, 10], [100, 100, 110, 110]], [0.6, 0.9]), "laogong": ([], []),
+                "zhongchong": ([], []), "shaofu": ([], [])}}
+    cls = ood_eval.DEFAULT_CLASSES
+    m = ood_eval.metrics(ood_eval.per_image_records([1], g, pred, cls, thr=0.15, best_only=True), [1], cls, 0.15)
+    assert m["micro"]["TP"] == 0 and m["micro"]["FP"] == 1     # only the 0.9 box (wrong place) is kept
+    m = ood_eval.metrics(ood_eval.per_image_records([1], g, pred, cls, thr=0.15), [1], cls, 0.15)
+    assert m["micro"]["TP"] == 1 and m["micro"]["FP"] == 1
+
+
 def test_matches_pycocotools(tmp_path):
     coco_mod = pytest.importorskip("pycocotools.coco")
     ce = pytest.importorskip("pycocotools.cocoeval")
