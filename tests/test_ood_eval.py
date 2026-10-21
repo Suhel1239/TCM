@@ -58,7 +58,7 @@ def test_perfect_and_degraded(tmp_path):
                   ["--ref", "perfect"])
     p, b = rows["perfect"], rows["bad"]
     assert float(p["mAP50"]) == pytest.approx(1.0) and float(p["F1"]) == pytest.approx(1.0)
-    assert float(b["mAP50"]) < 0.9 and float(b["F1"]) < 0.9 and int(b["FN"]) + int(b["skipped"]) > 0 and int(b["FP"]) > 0
+    assert float(b["mAP50"]) < 0.9 and float(b["F1"]) < 0.9 and int(b["FN"]) > 0 and int(b["FP"]) > 0
     assert "Difference vs perfect" in (tmp_path / "out" / "summary.md").read_text()
 
 
@@ -68,12 +68,27 @@ def test_threshold_and_only_detected():
                 "shaofu": ([[50, 50, 60, 60]], [0.9])}}
     cls = ood_eval.DEFAULT_CLASSES
     # only shaofu passes 0.15 -> only shaofu scored, yuji skipped
-    m = ood_eval.metrics(ood_eval.per_image_records([1], g, pred, cls, thr=0.15, only_detected=True), [1], cls, 0.15)
+    m = ood_eval.metrics(ood_eval.per_image_records([1], g, pred, cls, thr=0.15, missed="skip"), [1], cls, 0.15)
     assert m["micro"]["TP"] == 1 and m["micro"]["FN"] == 0 and m["micro"]["skipped"] == 1
     assert m["per_class"]["shaofu"]["AP"] == pytest.approx(1.0) and m["per_class"]["yuji"]["AP"] != m["per_class"]["yuji"]["AP"]
-    # --count-missed: yuji is a miss
+    # --missed fn: yuji is a miss
     m = ood_eval.metrics(ood_eval.per_image_records([1], g, pred, cls, thr=0.15), [1], cls, 0.15)
-    assert m["micro"]["FN"] == 1 and m["per_class"]["yuji"]["AP"] == 0.0
+    assert m["micro"]["FN"] == 1 and m["micro"]["FP"] == 0 and m["per_class"]["yuji"]["AP"] == 0.0
+    # --missed fp: yuji is a miss and a false positive
+    m = ood_eval.metrics(ood_eval.per_image_records([1], g, pred, cls, thr=0.15, missed="fp"), [1], cls, 0.15)
+    assert m["micro"]["FN"] == 1 and m["micro"]["FP"] == 1 and m["micro"]["P"] == pytest.approx(0.5)
+
+
+def test_missed_fp_equals_wrong_box():
+    cls = ood_eval.DEFAULT_CLASSES
+    g = {1: {c: [[i * 50, 0, i * 50 + 10, 10]] for i, c in enumerate(cls)}}
+    right = {c: ([[i * 50, 0, i * 50 + 10, 10]], [0.9]) for i, c in enumerate(cls)}
+    wrong4 = {1: {**right, "shaofu": ([[500, 500, 510, 510]], [0.9])}}   # 4 boxes, 1 wrong
+    miss4 = {1: {**right, "shaofu": ([], [])}}                          # 3 boxes, 1 missed
+    a = ood_eval.metrics(ood_eval.per_image_records([1], g, wrong4, cls, thr=0.15, missed="fp"), [1], cls, 0.15)
+    b = ood_eval.metrics(ood_eval.per_image_records([1], g, miss4, cls, thr=0.15, missed="fp"), [1], cls, 0.15)
+    assert a["micro"]["P"] == b["micro"]["P"] == pytest.approx(0.75)
+    assert a["micro"]["R"] == b["micro"]["R"] == pytest.approx(0.75)
 
 
 def test_best_box_only():
