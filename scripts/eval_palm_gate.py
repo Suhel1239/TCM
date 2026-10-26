@@ -17,6 +17,8 @@ and the gating impact: palm frames lost by the gate and non-palm frames let thro
 Note: video frames are strongly correlated; quote the per-video table and treat the frame-level CIs
 as optimistic.
 
+EASIEST: fill in the SETTINGS block below and run   python scripts/eval_palm_gate.py
+Or from the terminal:
     python scripts/eval_palm_gate.py --palm video_dumps/palm.csv --segments segments.csv \\
         --gt keyframes.json --out results/palm_gate
 """
@@ -34,6 +36,17 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from compare_trackers import VIDEO_REGEX  # noqa: E402
 from eval_palm_classifier import THRESHOLD, report  # noqa: E402
+
+# ============================================================================
+# SETTINGS - edit these and run:  python scripts/eval_palm_gate.py
+# ============================================================================
+PALM_CSV = r"/home/suhel.khan/TCM/video_eval/video_dumps/palm/palm.csv"       # from video_dump.py
+SEGMENTS_CSV = r"/home/suhel.khan/TCM/video_eval/palm_segments.csv"          # your palm / non_palm segments
+GT_JSON = r"/home/suhel.khan/TCM/video_eval/keyframes/_annotations.coco.json"  # keyframes = palm ("" = not used)
+OUT_DIR = r"/home/suhel.khan/TCM/video_eval/results/palm_gate"
+PALM_THRESHOLD = THRESHOLD    # threshold used in the pipeline (0.5)
+N_BOOTSTRAP = 1000
+# ============================================================================
 
 LABELS = {"palm": 1, "non_palm": 0, "non-palm": 0, "nonpalm": 0, "1": 1, "0": 0}
 
@@ -63,15 +76,18 @@ def load_labels(segments: str | None, gt: str | None, regex: str = VIDEO_REGEX) 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--palm", required=True)
-    ap.add_argument("--segments")
-    ap.add_argument("--gt")
+    ap.add_argument("--palm", default=PALM_CSV)
+    ap.add_argument("--segments", default=SEGMENTS_CSV or None)
+    ap.add_argument("--gt", default=GT_JSON or None)
     ap.add_argument("--gt-regex", default=VIDEO_REGEX)
-    ap.add_argument("--threshold", type=float, default=THRESHOLD)
-    ap.add_argument("--bootstrap", type=int, default=1000)
-    ap.add_argument("--out", default="palm_gate_results")
+    ap.add_argument("--threshold", type=float, default=PALM_THRESHOLD)
+    ap.add_argument("--bootstrap", type=int, default=N_BOOTSTRAP)
+    ap.add_argument("--out", default=OUT_DIR)
     args = ap.parse_args(argv)
 
+    for name, path in (("palm.csv", args.palm), ("segments", args.segments), ("keyframe json", args.gt)):
+        if path and not Path(path).is_file():
+            raise SystemExit(f"{name} not found: {path}  (set it in SETTINGS or pass it as an option)")
     lab = load_labels(args.segments, args.gt, args.gt_regex)
     keys, y, p = [], [], []
     with open(args.palm, newline="", encoding="utf-8") as f:

@@ -29,7 +29,8 @@ around all points in that frame, so videos with different hand sizes are compara
 Statistics over videos: mean +- sd; Friedman test across trackers and pairwise Wilcoxon
 (Holm-corrected) - needs scipy; optional paired TOST equivalence test (--equiv-margin).
 
-Usage
+EASIEST: fill in the SETTINGS block below and run   python scripts/compare_trackers.py
+Or from the terminal:
     python scripts/compare_trackers.py --tracker deepsort=ds.csv --tracker ocsort=oc.csv \
         --tracker flow=of.csv --gt keyframes_coco.json --detector det.csv --out tracker_compare
 """
@@ -48,8 +49,34 @@ from pathlib import Path
 import numpy as np
 
 # ============================================================================
-# SETTINGS
+# SETTINGS - edit these and run:  python scripts/compare_trackers.py
 # ============================================================================
+GT_JSON = r"/home/suhel.khan/TCM/video_eval/keyframes/_annotations.coco.json"   # the 5 x 50 annotated keyframes
+GT_REGEX = r"(?P<video>.+)_frame_(?P<frame>\d+)"   # how video name and frame number appear in the file names
+DUMP_ROOT = r"/home/suhel.khan/TCM/video_eval/video_dumps"      # OUT_ROOT of video_dump.py
+TRACK_ROOT = r"/home/suhel.khan/TCM/video_eval/video_tracks"    # OUT_ROOT of run_trackers.py
+OUT_ROOT = r"/home/suhel.khan/TCM/video_eval/results"
+MODEL_NAMES = ["GroundingDINO", "GLIP", "YOLOv8", "YOLO11", "YOLO26", "RT-DETR"]
+MAIN_MODEL = "GroundingDINO"
+
+# each comparison is run for every point subset -> OUT_ROOT/<out>/<subset>/
+POINT_SUBSETS = {
+    "all_points": ["yuji", "laogong", "zhongchong", "shaofu"],
+    "without_laogong": ["yuji", "zhongchong", "shaofu"],
+}
+COMPARISONS = [
+    # 1. trackers on the same detections of the main model (+ equivalence test on the success rate)
+    dict(out=f"trackers_{MAIN_MODEL}", detector=f"{DUMP_ROOT}/{MAIN_MODEL}/det.csv",
+         trackers={t: f"{TRACK_ROOT}/{MAIN_MODEL}/{t}.csv" for t in ("none", "flow", "ocsort", "deepsort")},
+         equiv_margin=0.05, equiv_metric="success@a0.5"),
+    # 2. every model with the pipeline tracker (optical flow) and with the detector alone
+    dict(out="models_flow", trackers={m: f"{TRACK_ROOT}/{m}/flow.csv" for m in MODEL_NAMES}),
+    dict(out="models_detector_only", trackers={m: f"{TRACK_ROOT}/{m}/none.csv" for m in MODEL_NAMES}),
+    # 3. what the palm gate costs (main model, flow tracker, with and without the gate)
+    dict(out="palm_gate_effect", trackers={"with_gate": f"{TRACK_ROOT}/{MAIN_MODEL}/flow.csv",
+                                           "without_gate": f"{TRACK_ROOT}/{MAIN_MODEL}_nogate/flow.csv"}),
+]
+
 POINTS = ("yuji", "laogong", "zhongchong", "shaofu")
 CODES = {"lu10": "yuji", "p8": "laogong", "p9": "zhongchong", "ht8": "shaofu"}
 PCK_THRS = (0.05, 0.10, 0.20)
@@ -57,7 +84,7 @@ SUCCESS_ALPHA = 0.5   # success: centre distance <= SUCCESS_ALPHA x GT box diago
 IOU_THR = 0.5
 SWAP_THR = 0.05       # two different points closer than this (x palm scale) = possible swap
 DET_SCORE_THR = 0.5   # detections used for det_agree
-VIDEO_REGEX = r"(?P<video>.+)_frame_(?P<frame>\d+)"
+VIDEO_REGEX = GT_REGEX
 KEY_METRICS = ("success@a0.5", "loss_rate", "frame_success", "err_mean", "err_median", "hit@iou0.5", "jitter",
                "jitter_px", "dropout", "breaks_per_100", "coverage_all", "swap_rate", "det_agree")
 LOWER_IS_BETTER = {"err_mean", "err_median", "jitter", "jitter_px", "breaks_per_100", "swap_rate", "det_agree",
@@ -306,8 +333,67 @@ def summarize(rows: list[dict], metrics: tuple[str, ...] = KEY_METRICS, equiv_ma
     return table
 
 
-def main(argv: list[str] | None = None) -> int:
+def compare(tracker_csvs: dict, gt_json: str | None = None, detector_csv: str | None = None,
+            out_dir: str = "tracker_compare", points=POINTS, equiv_margin: float | None = None,
+            equiv_metric: str = "err_mean", gt_regex: str = VIDEO_REGEX) -> list[dict]:
+    """tracker_csvs: {name: path}. Writes per_video.csv, summary.csv and summary.txt to out_dir."""
     global POINTS
+    all_points = POINTS
+    POINTS = tuple(norm_point(p) or p for p in points)       # load_csv / load_gt keep only these
+    try:
+        trackers = {name: load_csv(path) for name, path in tracker_csvs.items()}
+        gt = load_gt(gt_json, gt_regex) if gt_json else None
+        det = load_csv(detector_csv) if detector_csv else None
+        rows = evaluate(trackers, gt, det)
+    finally:
+        POINTS = all_points
+
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    cols = list(dict.fromkeys(k for r in rows for k in r))
+    with (out / "per_video.csv").open("w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=cols)
+        w.writeheader()
+        w.writerows(rows)
+    metrics = tuple(m for m in KEY_METRICS if any(m in r for r in rows))
+    with (out / "summary.txt").open("w", encoding="utf-8") as f:
+        f.write(f"points: {', '.join(norm_point(p) or p for p in points)}\n")
+        summarize(rows, metrics, equiv_margin, equiv_metric, out=f)
+    with (out / "summary.csv").open("w", newline="", encoding="utf-8") as f:   # mean / sd over videos
+        w = csv.writer(f)
+        w.writerow(["tracker", "metric", "mean", "sd", "n_videos"])
+        for t in dict.fromkeys(r["tracker"] for r in rows):
+            for m in metrics:
+                vals = np.array([r[m] for r in rows if r["tracker"] == t and m in r and not np.isnan(r[m])])
+                w.writerow([t, m, f"{vals.mean():.4f}" if len(vals) else "",
+                            f"{vals.std(ddof=1):.4f}" if len(vals) > 1 else "", len(vals)])
+    print((out / "summary.txt").read_text(encoding="utf-8"))
+    print(f"saved {out / 'per_video.csv'}, {out / 'summary.csv'} and {out / 'summary.txt'}")
+    return rows
+
+
+def run_settings() -> int:
+    """run every comparison in the SETTINGS block, once per point subset"""
+    for c in COMPARISONS:
+        csvs = {}
+        for name, path in c["trackers"].items():
+            if Path(path).is_file():
+                csvs[name] = path
+            else:
+                print(f"[{c['out']}] {name}: {path} not found, left out")
+        if not csvs:
+            print(f"[{c['out']}] nothing to compare, skipped")
+            continue
+        det = c.get("detector")
+        det = det if det and Path(det).is_file() else None
+        for subset, pts in POINT_SUBSETS.items():
+            print(f"\n######## {c['out']} / {subset} ########")
+            compare(csvs, GT_JSON or None, det, str(Path(OUT_ROOT) / c["out"] / subset), pts,
+                    c.get("equiv_margin"), c.get("equiv_metric", "err_mean"), GT_REGEX)
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--tracker", action="append", required=True, metavar="NAME=CSV")
     ap.add_argument("--gt", help="COCO json of annotated keyframes")
@@ -321,40 +407,16 @@ def main(argv: list[str] | None = None) -> int:
                     help="TOST equivalence margin, e.g. 0.02 (in palm-scale units for err_mean)")
     ap.add_argument("--equiv-metric", default="err_mean")
     args = ap.parse_args(argv)
-
-    POINTS = tuple(norm_point(p) or p for p in args.points)    # load_csv / load_gt keep only these
-    trackers = {}
+    csvs = {}
     for spec in args.tracker:
         if "=" not in spec:
             raise SystemExit(f"--tracker must be NAME=path.csv, got {spec!r}")
         name, path = spec.split("=", 1)
-        trackers[name] = load_csv(path)
-    gt = load_gt(args.gt, args.gt_regex) if args.gt else None
-    det = load_csv(args.detector) if args.detector else None
-    rows = evaluate(trackers, gt, det)
-
-    out = Path(args.out)
-    out.mkdir(parents=True, exist_ok=True)
-    cols = list(dict.fromkeys(k for r in rows for k in r))
-    with (out / "per_video.csv").open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=cols)
-        w.writeheader()
-        w.writerows(rows)
-    metrics = tuple(m for m in KEY_METRICS if any(m in r for r in rows))
-    with (out / "summary.txt").open("w", encoding="utf-8") as f:
-        summarize(rows, metrics, args.equiv_margin, args.equiv_metric, out=f)
-    with (out / "summary.csv").open("w", newline="", encoding="utf-8") as f:   # mean / sd over videos
-        w = csv.writer(f)
-        w.writerow(["tracker", "metric", "mean", "sd", "n_videos"])
-        for t in dict.fromkeys(r["tracker"] for r in rows):
-            for m in metrics:
-                vals = np.array([r[m] for r in rows if r["tracker"] == t and m in r and not np.isnan(r[m])])
-                w.writerow([t, m, f"{vals.mean():.4f}" if len(vals) else "",
-                            f"{vals.std(ddof=1):.4f}" if len(vals) > 1 else "", len(vals)])
-    print((out / "summary.txt").read_text(encoding="utf-8"))
-    print(f"saved {out / 'per_video.csv'}, {out / 'summary.csv'} and {out / 'summary.txt'}")
+        csvs[name] = path
+    compare(csvs, args.gt, args.detector, args.out, args.points, args.equiv_margin, args.equiv_metric,
+            args.gt_regex)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run_settings() if len(sys.argv) == 1 else main())

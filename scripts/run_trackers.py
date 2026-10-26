@@ -13,6 +13,9 @@ All trackers use the same detections, the same --det-thr, the same --max-lost an
 frames with P(palm) < --palm-thr (palm.csv from video_dump.py) get no output and reset the trackers,
 exactly like the video pipeline.
 
+EASIEST: fill in the SETTINGS block below and run   python scripts/run_trackers.py
+(ocsort needs  pip install boxmot,  deepsort needs  pip install deep-sort-realtime).
+Or from the terminal:
     python scripts/run_trackers.py --det video_dumps/YOLO26/det.csv --palm video_dumps/palm.csv \\
         --videos test_videos/ --trackers none flow ocsort deepsort --out video_tracks/YOLO26
 writes video_tracks/YOLO26/{none,flow,ocsort,deepsort}.csv
@@ -33,8 +36,24 @@ POINTS = ("yuji", "laogong", "zhongchong", "shaofu")
 VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv", ".m4v", ".wmv", ".mpg", ".mpeg"}
 
 # ============================================================================
-# SETTINGS
+# SETTINGS - edit these and run:  python scripts/run_trackers.py
 # ============================================================================
+DUMP_ROOT = r"/home/suhel.khan/TCM/video_eval/video_dumps"      # OUT_ROOT of video_dump.py
+VIDEOS = [r"/home/suhel.khan/TCM/video_eval/test_videos"]        # needed by flow / ocsort / deepsort
+OUT_ROOT = r"/home/suhel.khan/TCM/video_eval/video_tracks"      # writes OUT_ROOT/<model>/<tracker>.csv
+PALM_CSV = DUMP_ROOT + "/palm/palm.csv"                          # "" = no palm gate
+
+# model name (= folder in DUMP_ROOT) : trackers to run on its detections
+RUNS = {
+    "GroundingDINO": ["none", "flow", "ocsort", "deepsort"],     # tracker comparison on the main model
+    "GLIP":          ["none", "flow"],
+    "YOLOv8":        ["none", "flow"],
+    "YOLO11":        ["none", "flow"],
+    "YOLO26":        ["none", "flow"],
+    "RT-DETR":       ["none", "flow"],
+}
+ALSO_WITHOUT_GATE = True   # also write OUT_ROOT/<model>_nogate/ (no palm gate) -> shows what the gate costs
+
 DET_THR = 0.15        # detections used by every tracker (the pipeline threshold)
 PALM_THR = 0.5        # palm gate
 MAX_LOST = 15         # frames a track may coast without support before it is dropped
@@ -346,6 +365,25 @@ def run(det: dict, palm: dict | None, videos: dict, tracker_names: list[str], ou
     return stats
 
 
+def run_settings() -> int:
+    """run everything from the SETTINGS block"""
+    videos = find_videos(VIDEOS)
+    palm = load_palm(PALM_CSV) if PALM_CSV else None
+    if PALM_CSV and not palm:
+        raise SystemExit(f"{PALM_CSV} is empty")
+    for model, trackers in RUNS.items():
+        det_csv = Path(DUMP_ROOT) / model / "det.csv"
+        if not det_csv.is_file():
+            print(f"{model}: {det_csv} not found, skipped (run video_dump.py first)")
+            continue
+        det = load_det(str(det_csv))
+        variants = [(model, palm)] + ([(model + "_nogate", None)] if ALSO_WITHOUT_GATE and palm else [])
+        for out_name, gate in variants:
+            print(f"\n{out_name}: {', '.join(trackers)}")
+            run(det, gate, videos, trackers, Path(OUT_ROOT) / out_name, DET_THR, PALM_THR, MAX_LOST)
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--det", required=True, help="det.csv from video_dump.py")
@@ -363,4 +401,4 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run_settings() if len(sys.argv) == 1 else main())

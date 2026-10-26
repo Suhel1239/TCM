@@ -156,3 +156,35 @@ def test_compare_without_laogong(data):
         assert rows[0]["n_gt"] == "36"                      # 12 keyframes x 3 points
     finally:
         ct.POINTS = ("yuji", "laogong", "zhongchong", "shaofu")
+
+
+def test_settings_mode_end_to_end(data, monkeypatch):
+    def fake_builder(args, classes):        # stands in for the real detector
+        def predict(frame):
+            return np.array([[1, 2, 11, 12]], float), np.array([0.8]), np.array(["yuji"])
+        return predict
+    monkeypatch.setattr(vd, "build_predictor", fake_builder)
+    monkeypatch.setattr(vd, "has_module", lambda name: True)
+    monkeypatch.setattr(vd, "palm_predictor", lambda *a: (lambda frame: 0.9))
+    monkeypatch.setattr(vd, "VIDEOS", [str(data / "vid1.avi")])
+    monkeypatch.setattr(vd, "OUT_ROOT", str(data / "dumps"))
+    monkeypatch.setattr(vd, "MODELS", [dict(name="M1", family="yolo", weights="w.pt")])
+    vd.run_settings()
+    assert (data / "dumps" / "M1" / "det.csv").is_file() and (data / "dumps" / "palm" / "palm.csv").is_file()
+
+    for k, v in dict(DUMP_ROOT=str(data / "dumps"), VIDEOS=[str(data / "vid1.avi")], OUT_ROOT=str(data / "tracks"),
+                     PALM_CSV=str(data / "dumps" / "palm" / "palm.csv"), RUNS={"M1": ["none", "flow"]}).items():
+        monkeypatch.setattr(rt, k, v)
+    rt.run_settings()
+    assert (data / "tracks" / "M1" / "flow.csv").is_file() and (data / "tracks" / "M1_nogate" / "none.csv").is_file()
+
+    monkeypatch.setattr(ct, "GT_JSON", str(data / "gt.json"))
+    monkeypatch.setattr(ct, "OUT_ROOT", str(data / "results"))
+    monkeypatch.setattr(ct, "COMPARISONS", [dict(out="cmp", trackers={
+        "none": str(data / "tracks" / "M1" / "none.csv"), "flow": str(data / "tracks" / "M1" / "flow.csv"),
+        "missing": str(data / "nope.csv")})])
+    ct.run_settings()
+    for sub in ("all_points", "without_laogong"):
+        rows = list(csv.DictReader(open(data / "results" / "cmp" / sub / "per_video.csv")))
+        assert {r["tracker"] for r in rows} == {"none", "flow"}
+    assert ct.POINTS == ("yuji", "laogong", "zhongchong", "shaofu")

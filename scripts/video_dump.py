@@ -8,6 +8,10 @@ Writes to --out:
   palm.csv    video, frame, p_palm                          (only with --palm-weights)
   videos.csv  video, n_frames, fps, duration_s, width, height   (for the paper: number / duration)
 
+EASIEST: fill in the SETTINGS block below and run   python scripts/video_dump.py
+(in each conda env: models whose library is not installed in the current env are skipped, so run it
+once in the mmdet env, once in the YOLO env and once in the rtdetr env).
+
 Frame numbers are 0-based decode order (cv2.VideoCapture), which must be the numbering used in the
 annotated keyframe names (<video>_frame_<n>.*).  The video name is the file stem.
 
@@ -27,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import importlib.util
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -36,7 +41,48 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from ood_predict import DEFAULT_CLASSES, build_predictor  # noqa: E402
 
+# ============================================================================
+# SETTINGS - edit these and run:  python scripts/video_dump.py
+# ============================================================================
+VIDEOS = [r"/home/suhel.khan/TCM/video_eval/test_videos"]        # folder(s) and/or video files
+OUT_ROOT = r"/home/suhel.khan/TCM/video_eval/video_dumps"        # writes OUT_ROOT/<model name>/det.csv
+
+# every model to evaluate (family: mmdet = Grounding DINO / GLIP, yolo, rtdetr)
+MODELS = [
+    dict(name="GroundingDINO", family="mmdet",
+         config=r"/home/suhel.khan/TCM/For_Videos/model_weights_GD/after_sub_lev_split_only_det/train_pure_detection.py",
+         weights=r"/home/suhel.khan/TCM/For_Videos/model_weights_GD/after_sub_lev_split_only_det/epoch_28.pth",
+         classes=["laogong", "shaofu", "yuji", "zhongchong"]),     # prompt in TRAINING order
+    dict(name="GLIP", family="mmdet",
+         config=r"/path/to/glip_config.py",
+         weights=r"/path/to/glip_epoch.pth",
+         classes=["laogong", "shaofu", "yuji", "zhongchong"]),
+    dict(name="YOLOv8", family="yolo", imgsz=640,
+         weights=r"/home/suhel.khan/TCM/For_Videos/YOLO/runs/ResultsYOLOv8/experiment1/weights/best.pt"),
+    dict(name="YOLO11", family="yolo", imgsz=640,
+         weights=r"/home/suhel.khan/TCM/For_Videos/YOLO/runs/ResultsYOLOv11/experiment1/weights/best.pt"),
+    dict(name="YOLO26", family="yolo", imgsz=640,
+         weights=r"/home/suhel.khan/TCM/For_Videos/YOLO/runs/ResultsYOLOv26/experiment1/weights/best.pt"),
+    dict(name="RT-DETR", family="rtdetr",
+         weights=r"/home/suhel.khan/TCM/rtdetr/weights_and_outputs/checkpoint-5291"),
+]
+RUN_ONLY = []            # e.g. ["YOLO26"]; empty = every model whose library is installed in this env
+SKIP_DONE = True         # skip a model whose det.csv already exists
+
+# ResNet-18 palm classifier: run once, writes OUT_ROOT/palm/palm.csv ("" = skip)
+PALM_WEIGHTS = r"/path/to/resnet18_palm.pth"
+PALM_NUM_OUTPUTS = 2     # 2 = softmax over 2 classes, 1 = single logit
+PALM_INDEX = 1           # output index of "palm" (ImageFolder: non_palm=0, palm=1)
+PALM_IMG_SIZE = 224
+
+SCORE_THR = 0.02         # lowest score kept
+TOP_K = 5                # boxes kept per point per frame
+SATURATION = 1.0         # HSV saturation factor, the same for every model
+DEVICE = "cuda:0"
+# ============================================================================
+
 VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv", ".m4v", ".wmv", ".mpg", ".mpeg"}
+LIBRARY = {"mmdet": "mmdet", "yolo": "ultralytics", "rtdetr": "transformers"}
 
 
 def list_videos(paths: list[str]) -> list[Path]:
@@ -142,6 +188,43 @@ def dump(videos: list[Path], predict, palm, classes: list[str], out_dir: Path, s
         print(f"  {m['video']}: {m['n_frames']} frames, {m['fps']} fps, {m['duration_s']} s, {m['width']}x{m['height']}")
 
 
+def has_module(name: str) -> bool:
+    return importlib.util.find_spec(name) is not None
+
+
+def run_settings() -> int:
+    """run everything from the SETTINGS block"""
+    videos = list_videos(VIDEOS)
+    out_root = Path(OUT_ROOT)
+    if PALM_WEIGHTS:
+        palm_dir = out_root / "palm"
+        if SKIP_DONE and (palm_dir / "palm.csv").is_file():
+            print(f"palm classifier: {palm_dir / 'palm.csv'} exists, skipped")
+        elif not has_module("torchvision"):
+            print("palm classifier: torchvision not installed in this env, skipped")
+        else:
+            dev = DEVICE if DEVICE.startswith("cuda") or DEVICE == "cpu" else "cpu"
+            palm = palm_predictor(PALM_WEIGHTS, PALM_NUM_OUTPUTS, PALM_INDEX, PALM_IMG_SIZE, dev)
+            dump(videos, None, palm, [], palm_dir, SCORE_THR, TOP_K, name="palm")
+    for m in MODELS:
+        name, family = m["name"], m["family"]
+        if RUN_ONLY and name not in RUN_ONLY:
+            continue
+        if not has_module(LIBRARY[family]):
+            print(f"{name}: {LIBRARY[family]} not installed in this env, skipped (run it in its own env)")
+            continue
+        out = out_root / name
+        if SKIP_DONE and (out / "det.csv").is_file():
+            print(f"{name}: {out / 'det.csv'} exists, skipped")
+            continue
+        classes = m.get("classes", DEFAULT_CLASSES)
+        predict = build_predictor(SimpleNamespace(family=family, config=m.get("config"), weights=m["weights"],
+                                                  device=DEVICE, score_thr=SCORE_THR, imgsz=m.get("imgsz", 640)),
+                                  classes)
+        dump(videos, predict, None, classes, out, SCORE_THR, TOP_K, SATURATION, name)
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--family", choices=["mmdet", "yolo", "rtdetr", "none"], required=True,
@@ -184,4 +267,4 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run_settings() if len(sys.argv) == 1 else main())
