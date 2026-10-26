@@ -14,10 +14,16 @@ Inputs
 
 Metrics, per tracker and video (distances are divided by the palm scale = diagonal of the box
 around all points in that frame, so videos with different hand sizes are comparable)
-  with keyframe GT:  err_mean, err_median, pck@0.05/0.10/0.20, hit@iou0.5, gt_coverage
-                     (a missing output counts as a miss)
-  without GT:        jitter (2nd difference of the point centre), coverage_all (frames with all
-                     points), breaks_per_100 (track gaps), swap_rate (two points closer than
+  with keyframe GT:  success@a0.5   frame-level detection success rate: annotated points whose output
+                                    centre is within 0.5 x the GT box diagonal (same rule as the image
+                                    point metrics); a missing output counts as a failure
+                     loss_rate      1 - success@a0.5 (point missing or off-target on a keyframe)
+                     frame_success  keyframes on which ALL annotated points are a success
+                     err_mean, err_median, pck@0.05/0.10/0.20, hit@iou0.5, gt_coverage
+  without GT:        jitter (trajectory stability: mean 2nd difference of the point centre, x palm
+                     scale), jitter_px (the same in pixels), dropout (frames inside a point's track
+                     span without output), coverage_all (frames with all points), breaks_per_100
+                     (track losses = gaps per 100 frames), swap_rate (two points closer than
                      SWAP_THR), det_agree (median distance to confident detections)
 
 Statistics over videos: mean +- sd; Friedman test across trackers and pairwise Wilcoxon
@@ -47,12 +53,15 @@ import numpy as np
 POINTS = ("yuji", "laogong", "zhongchong", "shaofu")
 CODES = {"lu10": "yuji", "p8": "laogong", "p9": "zhongchong", "ht8": "shaofu"}
 PCK_THRS = (0.05, 0.10, 0.20)
+SUCCESS_ALPHA = 0.5   # success: centre distance <= SUCCESS_ALPHA x GT box diagonal
 IOU_THR = 0.5
 SWAP_THR = 0.05       # two different points closer than this (x palm scale) = possible swap
 DET_SCORE_THR = 0.5   # detections used for det_agree
 VIDEO_REGEX = r"(?P<video>.+)_frame_(?P<frame>\d+)"
-KEY_METRICS = ("err_mean", "pck@0.10", "hit@iou0.5", "jitter", "coverage_all", "det_agree")
-LOWER_IS_BETTER = {"err_mean", "err_median", "jitter", "breaks_per_100", "swap_rate", "det_agree"}
+KEY_METRICS = ("success@a0.5", "loss_rate", "frame_success", "err_mean", "err_median", "hit@iou0.5", "jitter",
+               "jitter_px", "dropout", "breaks_per_100", "coverage_all", "swap_rate", "det_agree")
+LOWER_IS_BETTER = {"err_mean", "err_median", "jitter", "jitter_px", "breaks_per_100", "swap_rate", "det_agree",
+                   "loss_rate", "dropout"}
 # ============================================================================
 
 
@@ -125,22 +134,34 @@ def video_scale(trk: dict) -> float:
 
 
 def gt_metrics(trk: dict, gt_v: dict, fallback_scale: float) -> dict:
-    errs, hits, n, covered = [], 0, 0, 0
+    errs, hits, n, covered, success = [], 0, 0, 0, 0
+    frames_ok = 0
     pck = dict.fromkeys(PCK_THRS, 0)
     for fr, pts in gt_v.items():
         scale = palm_scale(list(pts.values())) if len(pts) >= 2 else fallback_scale
+        all_ok = True
         for pt, gbox in pts.items():
             n += 1
             pred = trk.get(pt, {}).get(fr)
             if pred is None:
+                all_ok = False
                 continue
             covered += 1
-            e = float(np.linalg.norm(center(pred[0]) - center(gbox))) / scale
+            dist = float(np.linalg.norm(center(pred[0]) - center(gbox)))
+            ok = dist <= SUCCESS_ALPHA * np.hypot(gbox[2] - gbox[0], gbox[3] - gbox[1])
+            success += bool(ok)
+            all_ok &= bool(ok)
+            e = dist / scale
             errs.append(e)
-            hits += iou(pred[0], gbox) >= IOU_THR
+            hits += bool(iou(pred[0], gbox) >= IOU_THR)
             for t in PCK_THRS:
                 pck[t] += e <= t
-    out = {"n_gt": n, "gt_coverage": covered / n if n else float("nan"),
+        frames_ok += all_ok
+    out = {"n_gt": n, "n_keyframes": len(gt_v),
+           f"success@a{SUCCESS_ALPHA}": success / n if n else float("nan"),
+           "loss_rate": 1 - success / n if n else float("nan"),
+           "frame_success": frames_ok / len(gt_v) if gt_v else float("nan"),
+           "gt_coverage": covered / n if n else float("nan"),
            "err_mean": float(np.mean(errs)) if errs else float("nan"),
            "err_median": float(np.median(errs)) if errs else float("nan"),
            f"hit@iou{IOU_THR}": hits / n if n else float("nan")}
@@ -149,20 +170,23 @@ def gt_metrics(trk: dict, gt_v: dict, fallback_scale: float) -> dict:
 
 
 def free_metrics(trk: dict, frames: list[int], scale: float, det: dict | None) -> dict:
-    jit = []
-    breaks = 0
+    jit, jit_px = [], []
+    breaks = span = gaps = 0
     for pt in POINTS:
         fr = trk.get(pt, {})
         for f in fr:
             if f - 1 in fr and f - 2 in fr:
                 c0, c1, c2 = (center(fr[g][0]) for g in (f - 2, f - 1, f))
-                jit.append(float(np.linalg.norm(c2 - 2 * c1 + c0)) / scale)
+                jit_px.append(float(np.linalg.norm(c2 - 2 * c1 + c0)))
+                jit.append(jit_px[-1] / scale)
         present = [f in fr for f in frames]
         first = next((i for i, x in enumerate(present) if x), None)
         if first is not None:
             last = len(present) - 1 - present[::-1].index(True)
             seg = present[first:last + 1]
             breaks += sum(1 for i in range(1, len(seg)) if seg[i] and not seg[i - 1])
+            span += len(seg)
+            gaps += seg.count(False)
     all_pts = sum(all(f in trk.get(pt, {}) for pt in POINTS) for f in frames)
     swaps = 0
     for f in frames:
@@ -178,6 +202,8 @@ def free_metrics(trk: dict, frames: list[int], scale: float, det: dict | None) -
                     agree.append(float(np.linalg.norm(center(t[0]) - center(dbox))) / scale)
     nf = len(frames)
     return {"n_frames": nf, "jitter": float(np.mean(jit)) if jit else float("nan"),
+            "jitter_px": float(np.mean(jit_px)) if jit_px else float("nan"),
+            "dropout": gaps / span if span else float("nan"),
             "coverage_all": all_pts / nf if nf else float("nan"),
             "breaks_per_100": 100 * breaks / nf if nf else float("nan"),
             "swap_rate": swaps / nf if nf else float("nan"),
@@ -285,6 +311,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--tracker", action="append", required=True, metavar="NAME=CSV")
     ap.add_argument("--gt", help="COCO json of annotated keyframes")
     ap.add_argument("--detector", help="per-frame detector CSV")
+    ap.add_argument("--gt-regex", default=VIDEO_REGEX,
+                    help="regex with groups video and frame, read from the keyframe file names")
     ap.add_argument("--out", default="tracker_compare")
     ap.add_argument("--equiv-margin", type=float, default=None,
                     help="TOST equivalence margin, e.g. 0.02 (in palm-scale units for err_mean)")
@@ -297,7 +325,7 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit(f"--tracker must be NAME=path.csv, got {spec!r}")
         name, path = spec.split("=", 1)
         trackers[name] = load_csv(path)
-    gt = load_gt(args.gt) if args.gt else None
+    gt = load_gt(args.gt, args.gt_regex) if args.gt else None
     det = load_csv(args.detector) if args.detector else None
     rows = evaluate(trackers, gt, det)
 
@@ -311,8 +339,16 @@ def main(argv: list[str] | None = None) -> int:
     metrics = tuple(m for m in KEY_METRICS if any(m in r for r in rows))
     with (out / "summary.txt").open("w", encoding="utf-8") as f:
         summarize(rows, metrics, args.equiv_margin, args.equiv_metric, out=f)
+    with (out / "summary.csv").open("w", newline="", encoding="utf-8") as f:   # mean / sd over videos
+        w = csv.writer(f)
+        w.writerow(["tracker", "metric", "mean", "sd", "n_videos"])
+        for t in dict.fromkeys(r["tracker"] for r in rows):
+            for m in metrics:
+                vals = np.array([r[m] for r in rows if r["tracker"] == t and m in r and not np.isnan(r[m])])
+                w.writerow([t, m, f"{vals.mean():.4f}" if len(vals) else "",
+                            f"{vals.std(ddof=1):.4f}" if len(vals) > 1 else "", len(vals)])
     print((out / "summary.txt").read_text(encoding="utf-8"))
-    print(f"saved {out / 'per_video.csv'} and {out / 'summary.txt'}")
+    print(f"saved {out / 'per_video.csv'}, {out / 'summary.csv'} and {out / 'summary.txt'}")
     return 0
 
 
