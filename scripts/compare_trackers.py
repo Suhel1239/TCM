@@ -307,18 +307,22 @@ def summarize(rows: list[dict], metrics: tuple[str, ...] = KEY_METRICS, equiv_ma
 
 
 def main(argv: list[str] | None = None) -> int:
+    global POINTS
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--tracker", action="append", required=True, metavar="NAME=CSV")
     ap.add_argument("--gt", help="COCO json of annotated keyframes")
     ap.add_argument("--detector", help="per-frame detector CSV")
     ap.add_argument("--gt-regex", default=VIDEO_REGEX,
                     help="regex with groups video and frame, read from the keyframe file names")
+    ap.add_argument("--points", nargs="+", default=list(POINTS),
+                    help="points to evaluate, e.g. --points yuji zhongchong shaofu (without laogong)")
     ap.add_argument("--out", default="tracker_compare")
     ap.add_argument("--equiv-margin", type=float, default=None,
                     help="TOST equivalence margin, e.g. 0.02 (in palm-scale units for err_mean)")
     ap.add_argument("--equiv-metric", default="err_mean")
     args = ap.parse_args(argv)
 
+    POINTS = tuple(norm_point(p) or p for p in args.points)    # load_csv / load_gt keep only these
     trackers = {}
     for spec in args.tracker:
         if "=" not in spec:

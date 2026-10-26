@@ -145,3 +145,14 @@ def test_palm_gate_from_segments_and_keyframes(data):
     assert "48 frames: 43 palm, 5 non-palm" in txt          # 40 segment frames + keyframes 48, 53, 58
     rows = list(csv.DictReader(open(data / "gate" / "predictions.csv")))
     assert all(r["true"] == r["pred"] for r in rows)
+
+
+def test_compare_without_laogong(data):
+    rt.run(rt.load_det(str(data / "det.csv")), None, {}, ["none"], data / "tr3")
+    try:
+        ct.main(["--tracker", f"none={data / 'tr3' / 'none.csv'}", "--gt", str(data / "gt.json"),
+                 "--points", "yuji", "zhongchong", "shaofu", "--out", str(data / "cmp")])
+        rows = list(csv.DictReader(open(data / "cmp" / "per_video.csv")))
+        assert rows[0]["n_gt"] == "36"                      # 12 keyframes x 3 points
+    finally:
+        ct.POINTS = ("yuji", "laogong", "zhongchong", "shaofu")
