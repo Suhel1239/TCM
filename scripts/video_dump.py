@@ -268,7 +268,9 @@ def run_settings() -> int:
     """run everything from the SETTINGS block"""
     videos = list_videos(VIDEOS)
     out_root = Path(OUT_ROOT)
-    if PALM_WEIGHTS:
+    if PALM_WEIGHTS and not Path(PALM_WEIGHTS).is_file():
+        print(f"palm classifier: {PALM_WEIGHTS} not found, skipped (set PALM_WEIGHTS)")
+    elif PALM_WEIGHTS:
         palm_dir = out_root / "palm"
         if SKIP_DONE and (palm_dir / "palm.csv").is_file():
             print(f"palm classifier: {palm_dir / 'palm.csv'} exists, skipped")
@@ -284,6 +286,10 @@ def run_settings() -> int:
             continue
         if not has_module(LIBRARY[family]):
             print(f"{name}: {LIBRARY[family]} not installed in this env, skipped (run it in its own env)")
+            continue
+        missing = [k for k in ("weights", "config") if m.get(k) and not Path(m[k]).exists()]
+        if missing:
+            print(f"{name}: {', '.join(f'{k} {m[k]}' for k in missing)} not found, skipped (fix the path in MODELS)")
             continue
         out = out_root / name
         if SKIP_DONE and (out / "det.csv").is_file():

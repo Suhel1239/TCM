@@ -168,9 +168,13 @@ def test_settings_mode_end_to_end(data, monkeypatch):
     monkeypatch.setattr(vd, "palm_predictor", lambda *a: (lambda frame: 0.9))
     monkeypatch.setattr(vd, "VIDEOS", [str(data / "vid1.avi")])
     monkeypatch.setattr(vd, "OUT_ROOT", str(data / "dumps"))
-    monkeypatch.setattr(vd, "MODELS", [dict(name="M1", family="yolo", weights="w.pt")])
+    (data / "w.pt").write_text("x")
+    monkeypatch.setattr(vd, "PALM_WEIGHTS", str(data / "w.pt"))
+    monkeypatch.setattr(vd, "MODELS", [dict(name="M1", family="yolo", weights=str(data / "w.pt")),
+                                       dict(name="M2", family="yolo", weights=str(data / "missing.pt"))])
     vd.run_settings()
     assert (data / "dumps" / "M1" / "det.csv").is_file() and (data / "dumps" / "palm" / "palm.csv").is_file()
+    assert not (data / "dumps" / "M2").exists()                 # weights not found -> skipped
 
     for k, v in dict(DUMP_ROOT=str(data / "dumps"), VIDEOS=[str(data / "vid1.avi")], OUT_ROOT=str(data / "tracks"),
                      PALM_CSV=str(data / "dumps" / "palm" / "palm.csv"), RUNS={"M1": ["none", "flow"]}).items():
