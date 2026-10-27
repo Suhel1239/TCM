@@ -193,3 +193,19 @@ def test_settings_mode_end_to_end(data, monkeypatch):
         rows = list(csv.DictReader(open(data / "results" / "cmp" / sub / "per_video.csv")))
         assert {r["tracker"] for r in rows} == {"none", "flow"}
     assert ct.POINTS == ("yuji", "laogong", "zhongchong", "shaofu")
+
+
+def test_keyframes_from_one_json_per_video(data):
+    coco = json.loads((data / "gt.json").read_text())
+    folder = data / "kf"
+    for half, imgs in (("a", coco["images"][:6]), ("b", coco["images"][6:])):
+        ids = {im["id"] for im in imgs}
+        part = dict(coco, images=[dict(im, file_name=f"vid1_frame_{int(im['file_name'][11:14]):03d}_jpg.rf.Xy9.jpg")
+                                  for im in imgs],
+                    annotations=[a for a in coco["annotations"] if a["image_id"] in ids])
+        (folder / half).mkdir(parents=True)
+        (folder / half / "_annotations.coco.json").write_text(json.dumps(part))
+    whole = ct.load_gt(str(data / "gt.json"))
+    for src in (str(folder), [str(folder / "a" / "_annotations.coco.json"), str(folder / "b" / "_annotations.coco.json")]):
+        g = ct.load_gt(src)
+        assert sorted(g["vid1"]) == sorted(whole["vid1"]) and len(g["vid1"]) == 12

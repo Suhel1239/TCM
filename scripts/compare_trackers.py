@@ -9,7 +9,9 @@ Inputs
       point  = yuji / laogong / zhongchong / shaofu (codes LU10/P8/P9/HT8 accepted)
       source = optional; "det" for frames where the box was (re)set from the detector -
                those rows are skipped for detector agreement
-  --gt keyframes.json        COCO json of the annotated keyframes; file names <video>_frame_<n>.*
+  --gt keyframes.json ...    COCO json(s) of the annotated keyframes - one file for all videos, one file
+                             per video, or a folder (every *.json inside, also in sub-folders);
+                             image file names <video>_frame_<n>.*  (e.g. vid_1_frame_042_jpg.rf.<hash>.jpg)
   --detector det.csv         optional, same CSV format: per-frame detector output
 
 Metrics, per tracker and video (distances are divided by the palm scale = diagonal of the box
@@ -51,7 +53,14 @@ import numpy as np
 # ============================================================================
 # SETTINGS - edit these and run:  python scripts/compare_trackers.py
 # ============================================================================
-GT_JSON = r"/home/suhel.khan/TCM/video_eval/keyframes/_annotations.coco.json"   # the 5 x 50 annotated keyframes
+# annotated keyframes: one COCO json per video (list), one json for all, or a folder holding them
+GT_JSON = [
+    r"/home/suhel.khan/TCM/video_eval/keyframes/vid_1/_annotations.coco.json",
+    r"/home/suhel.khan/TCM/video_eval/keyframes/vid_2_stany_left/_annotations.coco.json",
+    r"/home/suhel.khan/TCM/video_eval/keyframes/vid_2_stany_right/_annotations.coco.json",
+    r"/home/suhel.khan/TCM/video_eval/keyframes/vid_3_huihui_left/_annotations.coco.json",
+    r"/home/suhel.khan/TCM/video_eval/keyframes/vid_3_huihui_right/_annotations.coco.json",
+]
 GT_REGEX = r"(?P<video>.+)_frame_(?P<frame>\d+)"   # how video name and frame number appear in the file names
 DUMP_ROOT = r"/home/suhel.khan/TCM/video_eval/video_dumps"      # OUT_ROOT of video_dump.py
 TRACK_ROOT = r"/home/suhel.khan/TCM/video_eval/video_tracks"    # OUT_ROOT of run_trackers.py
@@ -109,8 +118,46 @@ def load_csv(path: str) -> dict:
     return tracks
 
 
-def load_gt(path: str, regex: str = VIDEO_REGEX) -> dict:
-    """COCO keyframes -> {video: {frame: {point: box xyxy}}}"""
+def gt_files(paths) -> list[Path]:
+    """a json file, a folder (all *.json inside, recursively) or a list of those -> json files"""
+    if isinstance(paths, (str, Path)):
+        paths = [paths]
+    files = []
+    for p in map(Path, paths):
+        if p.is_dir():
+            files += sorted(p.rglob("*.json"))
+        elif p.is_file():
+            files.append(p)
+        else:
+            raise SystemExit(f"keyframe annotation file / folder not found: {p}")
+    if not files:
+        raise SystemExit(f"no .json files in {paths}")
+    return files
+
+
+def load_gt(paths, regex: str = VIDEO_REGEX) -> dict:
+    """COCO keyframes (one or several json files) -> {video: {frame: {point: box xyxy}}}"""
+    gt: dict = defaultdict(lambda: defaultdict(dict))
+    for path in gt_files(paths):
+        one = load_gt_file(str(path), regex)
+        for v, frames in one.items():
+            for fr, pts in frames.items():
+                if fr in gt[v]:
+                    print(f"warning: {v} frame {fr} is annotated in more than one file; {path.name} kept",
+                          file=sys.stderr)
+                gt[v][fr] = pts
+        print(f"keyframes: {path} -> " + ", ".join(f"{v} ({len(f)} frames)" for v, f in sorted(one.items())),
+              file=sys.stderr)
+    for v, frames in gt.items():   # numbers 0..n-1 look like a keyframe counter, not the video frame index
+        fr = sorted(frames)
+        if len(fr) > 5 and fr == list(range(len(fr))):
+            print(f"WARNING: {v}: keyframe numbers are exactly 0..{len(fr) - 1}. They must be the frame index in the "
+                  "video (as in video_dump.py), not a keyframe counter.", file=sys.stderr)
+    return gt
+
+
+def load_gt_file(path: str, regex: str = VIDEO_REGEX) -> dict:
+    """one COCO json -> {video: {frame: {point: box xyxy}}}"""
     coco = json.loads(Path(path).read_text(encoding="utf-8"))
     cat = {c["id"]: norm_point(c["name"]) for c in coco["categories"]}
     img = {}
@@ -330,16 +377,21 @@ def summarize(rows: list[dict], metrics: tuple[str, ...] = KEY_METRICS, equiv_ma
     return table
 
 
-def compare(tracker_csvs: dict, gt_json: str | None = None, detector_csv: str | None = None,
+def compare(tracker_csvs: dict, gt_json=None, detector_csv: str | None = None,
             out_dir: str = "tracker_compare", points=POINTS, equiv_margin: float | None = None,
             equiv_metric: str = "err_mean", gt_regex: str = VIDEO_REGEX) -> list[dict]:
-    """tracker_csvs: {name: path}. Writes per_video.csv, summary.csv and summary.txt to out_dir."""
+    """tracker_csvs: {name: path}; gt_json: json file(s) / folder, or keyframes already loaded with load_gt.
+    Writes per_video.csv, summary.csv and summary.txt to out_dir."""
     global POINTS
     all_points = POINTS
     POINTS = tuple(norm_point(p) or p for p in points)       # load_csv / load_gt keep only these
     try:
         trackers = {name: load_csv(path) for name, path in tracker_csvs.items()}
-        gt = load_gt(gt_json, gt_regex) if gt_json else None
+        if isinstance(gt_json, dict):          # already loaded: keep only the points of this subset
+            gt = {v: {fr: {pt: b for pt, b in pts.items() if pt in POINTS} for fr, pts in frames.items()}
+                  for v, frames in gt_json.items()}
+        else:
+            gt = load_gt(gt_json, gt_regex) if gt_json else None
         det = load_csv(detector_csv) if detector_csv else None
         rows = evaluate(trackers, gt, det)
     finally:
@@ -371,6 +423,9 @@ def compare(tracker_csvs: dict, gt_json: str | None = None, detector_csv: str | 
 
 def run_settings() -> int:
     """run every comparison in the SETTINGS block, once per point subset"""
+    gt = load_gt(GT_JSON, GT_REGEX) if GT_JSON else None
+    if gt is not None:
+        print(f"{len(gt)} videos, {sum(len(f) for f in gt.values())} annotated keyframes")
     for c in COMPARISONS:
         csvs = {}
         for name, path in c["trackers"].items():
@@ -385,7 +440,7 @@ def run_settings() -> int:
         det = det if det and Path(det).is_file() else None
         for subset, pts in POINT_SUBSETS.items():
             print(f"\n######## {c['out']} / {subset} ########")
-            compare(csvs, GT_JSON or None, det, str(Path(OUT_ROOT) / c["out"] / subset), pts,
+            compare(csvs, gt, det, str(Path(OUT_ROOT) / c["out"] / subset), pts,
                     c.get("equiv_margin"), c.get("equiv_metric", "err_mean"), GT_REGEX)
     return 0
 
@@ -393,7 +448,7 @@ def run_settings() -> int:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--tracker", action="append", required=True, metavar="NAME=CSV")
-    ap.add_argument("--gt", help="COCO json of annotated keyframes")
+    ap.add_argument("--gt", nargs="+", help="COCO json(s) of the annotated keyframes, or a folder")
     ap.add_argument("--detector", help="per-frame detector CSV")
     ap.add_argument("--gt-regex", default=VIDEO_REGEX,
                     help="regex with groups video and frame, read from the keyframe file names")
