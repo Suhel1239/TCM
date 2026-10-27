@@ -209,3 +209,15 @@ def test_keyframes_from_one_json_per_video(data):
     for src in (str(folder), [str(folder / "a" / "_annotations.coco.json"), str(folder / "b" / "_annotations.coco.json")]):
         g = ct.load_gt(src)
         assert sorted(g["vid1"]) == sorted(whole["vid1"]) and len(g["vid1"]) == 12
+
+
+def test_duplicate_keyframes_warned_and_first_kept(data, capsys):
+    coco = json.loads((data / "gt.json").read_text())
+    im0 = coco["images"][0]
+    coco["images"].append(dict(im0, id=99, file_name=im0["file_name"].replace(".png", "_jpg.rf.Aug.jpg")))
+    coco["annotations"] += [dict(a, image_id=99, bbox=[0, 0, 5, 5]) for a in coco["annotations"]
+                            if a["image_id"] == im0["id"]]
+    (data / "dup.json").write_text(json.dumps(coco))
+    g = ct.load_gt(str(data / "dup.json"))
+    assert "appear in more than one image" in capsys.readouterr().err
+    assert len(g["vid1"]) == 12 and g["vid1"][3]["yuji"][2] > 5          # the first (original) image kept

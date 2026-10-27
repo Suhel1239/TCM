@@ -160,13 +160,25 @@ def load_gt_file(path: str, regex: str = VIDEO_REGEX) -> dict:
     """one COCO json -> {video: {frame: {point: box xyxy}}}"""
     coco = json.loads(Path(path).read_text(encoding="utf-8"))
     cat = {c["id"]: norm_point(c["name"]) for c in coco["categories"]}
-    img = {}
+    img, seen = {}, defaultdict(list)
     for im in coco["images"]:
         m = re.search(regex, Path(im["file_name"]).stem)
         if m:
             img[im["id"]] = (m.group("video"), int(m.group("frame")))
+            seen[img[im["id"]]].append(im["file_name"])
         else:
             print(f"warning: cannot read video/frame from {im['file_name']}, skipped", file=sys.stderr)
+    dup = {k: v for k, v in seen.items() if len(v) > 1}
+    if dup:     # e.g. Roboflow augmentation copies (flipped / rotated) of the same frame in a train export
+        (v, fr), names = next(iter(dup.items()))
+        print(f"WARNING: {path}: {len(dup)} frames appear in more than one image ({sum(map(len, dup.values()))} "
+              f"images), e.g. {v} frame {fr}: {names[:3]}. If these are augmented copies the boxes are flipped / "
+              "moved: export the keyframes from Roboflow WITHOUT augmentation. Only the first image of each frame "
+              "is used.", file=sys.stderr)
+        first = {}
+        for i, k in img.items():
+            first.setdefault(k, i)
+        img = {i: k for i, k in img.items() if first[k] == i}
     gt: dict = defaultdict(lambda: defaultdict(dict))
     for a in coco["annotations"]:
         if a["image_id"] in img and cat.get(a["category_id"]):
