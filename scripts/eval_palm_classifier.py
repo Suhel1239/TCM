@@ -191,27 +191,55 @@ def list_images(data_dir: Path) -> tuple[list[str], np.ndarray]:
 
 
 def load_model(weights: str, num_outputs: int, device):
+    """ResNet-18 palm classifier. The fc head is rebuilt from the checkpoint, so both
+    model.fc = nn.Linear(512, n) and model.fc = nn.Sequential(nn.Linear(512, n), ...) (fc.0.weight ...) load."""
     import torch
     from torchvision.models import resnet18
 
     obj = torch.load(weights, map_location=device, weights_only=False)
     if isinstance(obj, torch.nn.Module):
-        model = obj
-    else:
-        state = obj
-        for key in ("state_dict", "model_state_dict", "model"):
-            if isinstance(state, dict) and key in state and isinstance(state[key], dict):
-                state = state[key]
-        state = {k.removeprefix("module.").removeprefix("model."): v for k, v in state.items()}
-        model = resnet18(weights=None)
-        model.fc = torch.nn.Linear(model.fc.in_features, num_outputs)
-        missing, unexpected = model.load_state_dict(state, strict=False)
-        if missing or unexpected:
-            raise SystemExit(f"weights do not match a ResNet-18 with {num_outputs} outputs.\n"
-                             f"  missing: {missing[:5]}\n  unexpected: {unexpected[:5]}\n"
-                             "Check NUM_OUTPUTS, or whether the fc layer had another structure.")
+        return obj.to(device).eval()
+    state = obj
+    for key in ("state_dict", "model_state_dict", "model"):
+        if isinstance(state, dict) and key in state and isinstance(state[key], dict):
+            state = state[key]
+    state = {k.removeprefix("module.").removeprefix("model."): v for k, v in state.items()}
+    model = resnet18(weights=None)
+    model.fc = build_fc_head(state, model.fc.in_features, num_outputs)
+    missing, unexpected = model.load_state_dict(state, strict=False)
+    if missing or unexpected:
+        raise SystemExit(f"weights do not match a ResNet-18 palm classifier.\n"
+                         f"  missing: {missing[:5]}\n  unexpected: {unexpected[:5]}")
     return model.to(device).eval()
 
+
+def build_fc_head(state: dict, in_features: int, num_outputs: int):
+    """fc as saved in the checkpoint: a single Linear (fc.weight) or a Sequential (fc.<i>.weight)"""
+    import torch
+    if "fc.weight" in state:
+        out = state["fc.weight"].shape[0]
+        if out != num_outputs:
+            print(f"note: classifier has {out} output(s), using that instead of NUM_OUTPUTS={num_outputs}",
+                  file=sys.stderr)
+        return torch.nn.Linear(state["fc.weight"].shape[1], out)
+    idx = sorted({int(k.split(".")[1]) for k in state if k.startswith("fc.") and k.endswith(".weight")})
+    if not idx:
+        return torch.nn.Linear(in_features, num_outputs)
+    layers = []
+    for i in range(idx[-1] + 1):
+        if i in idx:
+            w = state[f"fc.{i}.weight"]
+            layers.append(torch.nn.Linear(w.shape[1], w.shape[0]))
+        elif idx[0] < i < idx[-1]:   # between two Linear layers: activation (ReLU; Dropout is a no-op at test time)
+            layers.append(torch.nn.ReLU())
+        else:                        # before the first / after the last Linear: Dropout, or a final Softmax/Sigmoid
+            layers.append(torch.nn.Identity())
+    out = state[f"fc.{idx[-1]}.weight"].shape[0]
+    if out != num_outputs:
+        print(f"note: classifier has {out} output(s), using that instead of NUM_OUTPUTS={num_outputs}",
+              file=sys.stderr)
+    print(f"palm classifier head: {torch.nn.Sequential(*layers)}  (outputs treated as logits)", file=sys.stderr)
+    return torch.nn.Sequential(*layers)
 
 def predict(model, paths: list[str], device, img_size: int = IMG_SIZE, batch_size: int = BATCH_SIZE,
             num_outputs: int = NUM_OUTPUTS, palm_index: int = PALM_INDEX) -> np.ndarray:
@@ -226,7 +254,7 @@ def predict(model, paths: list[str], device, img_size: int = IMG_SIZE, batch_siz
         for i in range(0, len(paths), batch_size):
             x = torch.stack([tf(Image.open(p).convert("RGB")) for p in paths[i:i + batch_size]]).to(device)
             out = model(x)
-            if num_outputs == 1:
+            if out.shape[-1] == 1:  # single logit (sigmoid), else softmax over the classes
                 pr = torch.sigmoid(out.reshape(-1))
                 pr = pr if palm_index == 1 else 1 - pr
             else:
