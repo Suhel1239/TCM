@@ -41,7 +41,7 @@ VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv", ".m4v", ".wmv", ".mpg", ".mpeg"}
 DUMP_ROOT = r"/home/suhel.khan/TCM/video_eval/video_dumps"      # OUT_ROOT of video_dump.py
 VIDEOS = [r"/home/suhel.khan/TCM/video_eval/test_videos"]        # needed by flow / ocsort / deepsort
 OUT_ROOT = r"/home/suhel.khan/TCM/video_eval/video_tracks"      # writes OUT_ROOT/<model>/<tracker>.csv
-PALM_CSV = DUMP_ROOT + "/palm/palm.csv"                          # "" = no palm gate
+PALM_CSV = ""        # no palm gate (set to DUMP_ROOT + "/palm/palm.csv" to gate frames with the palm classifier)
 
 # model name (= folder in DUMP_ROOT) : trackers to run on its detections
 RUNS = {
@@ -52,7 +52,7 @@ RUNS = {
     "YOLO26":        ["none", "flow"],
     "RT-DETR":       ["none", "flow"],
 }
-ALSO_WITHOUT_GATE = True   # also write OUT_ROOT/<model>_nogate/ (no palm gate) -> shows what the gate costs
+ALSO_WITHOUT_GATE = False  # with a palm gate: also write OUT_ROOT/<model>_nogate/ -> shows what the gate costs
 
 DET_THR = 0.15        # detections used by every tracker (the pipeline threshold)
 PALM_THR = 0.5        # palm gate

@@ -69,7 +69,7 @@ RUN_ONLY = []            # e.g. ["YOLO26"]; empty = every model whose library is
 SKIP_DONE = True         # skip a model whose det.csv already exists
 
 # ResNet-18 palm classifier: run once, writes OUT_ROOT/palm/palm.csv ("" = skip)
-PALM_WEIGHTS = r"/path/to/resnet18_palm.pth"
+PALM_WEIGHTS = ""        # no palm classifier; e.g. r"/path/to/resnet18_palm.pth" to also write palm.csv
 PALM_NUM_OUTPUTS = 2     # 2 = softmax over 2 classes, 1 = single logit
 PALM_INDEX = 1           # output index of "palm" (ImageFolder: non_palm=0, palm=1)
 PALM_IMG_SIZE = 224

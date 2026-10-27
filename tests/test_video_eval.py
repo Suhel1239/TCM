@@ -177,7 +177,8 @@ def test_settings_mode_end_to_end(data, monkeypatch):
     assert not (data / "dumps" / "M2").exists()                 # weights not found -> skipped
 
     for k, v in dict(DUMP_ROOT=str(data / "dumps"), VIDEOS=[str(data / "vid1.avi")], OUT_ROOT=str(data / "tracks"),
-                     PALM_CSV=str(data / "dumps" / "palm" / "palm.csv"), RUNS={"M1": ["none", "flow"]}).items():
+                     PALM_CSV=str(data / "dumps" / "palm" / "palm.csv"), RUNS={"M1": ["none", "flow"]},
+                     ALSO_WITHOUT_GATE=True).items():
         monkeypatch.setattr(rt, k, v)
     rt.run_settings()
     assert (data / "tracks" / "M1" / "flow.csv").is_file() and (data / "tracks" / "M1_nogate" / "none.csv").is_file()

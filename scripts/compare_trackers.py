@@ -72,9 +72,6 @@ COMPARISONS = [
     # 2. every model with the pipeline tracker (optical flow) and with the detector alone
     dict(out="models_flow", trackers={m: f"{TRACK_ROOT}/{m}/flow.csv" for m in MODEL_NAMES}),
     dict(out="models_detector_only", trackers={m: f"{TRACK_ROOT}/{m}/none.csv" for m in MODEL_NAMES}),
-    # 3. what the palm gate costs (main model, flow tracker, with and without the gate)
-    dict(out="palm_gate_effect", trackers={"with_gate": f"{TRACK_ROOT}/{MAIN_MODEL}/flow.csv",
-                                           "without_gate": f"{TRACK_ROOT}/{MAIN_MODEL}_nogate/flow.csv"}),
 ]
 
 POINTS = ("yuji", "laogong", "zhongchong", "shaofu")
