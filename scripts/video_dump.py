@@ -38,8 +38,7 @@ from types import SimpleNamespace
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from ood_predict import DEFAULT_CLASSES, build_predictor  # noqa: E402
+DEFAULT_CLASSES = ["yuji", "laogong", "zhongchong", "shaofu"]
 
 # ============================================================================
 # SETTINGS - edit these and run:  python scripts/video_dump.py
@@ -83,6 +82,80 @@ DEVICE = "cuda:0"
 
 VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv", ".m4v", ".wmv", ".mpg", ".mpeg"}
 LIBRARY = {"mmdet": "mmdet", "yolo": "ultralytics", "rtdetr": "transformers"}
+PALM_MEAN, PALM_STD = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)   # ImageNet (as in training)
+
+
+# ───────────────────── detectors (same as ood_predict.py; this file is standalone) ─────────────────────
+def build_predictor(args, classes):
+    """returns f(img_bgr) -> (boxes xyxy (N,4), scores (N,), names (N,) lowercase)"""
+    if args.family == "mmdet":
+        from mmdet.apis import init_detector, inference_detector
+        model = init_detector(args.config, args.weights, device=args.device)
+
+        def predict(img):
+            r = inference_detector(model, img, text_prompt=tuple(classes), custom_entities=True).pred_instances
+            labels = r.labels.cpu().numpy()
+            names = np.array([classes[i].lower() if 0 <= i < len(classes) else "" for i in labels])
+            return r.bboxes.cpu().numpy(), r.scores.cpu().numpy(), names
+        return predict
+
+    if args.family == "yolo":
+        from ultralytics import YOLO
+        model = YOLO(args.weights)
+        dev = 0 if args.device.startswith("cuda") else "cpu"
+
+        def predict(img):
+            r = model.predict(img, imgsz=args.imgsz, conf=args.score_thr, iou=0.7, max_det=300,
+                              device=dev, verbose=False)[0]
+            names = np.array([str(model.names[int(c)]).lower() for c in r.boxes.cls.cpu().numpy()])
+            return r.boxes.xyxy.cpu().numpy(), r.boxes.conf.cpu().numpy(), names
+        return predict
+
+    if args.family == "rtdetr":
+        import cv2
+        import torch
+        from PIL import Image
+        from transformers import AutoImageProcessor, AutoModelForObjectDetection
+        model = AutoModelForObjectDetection.from_pretrained(args.weights).to(args.device).eval()
+        proc = AutoImageProcessor.from_pretrained(args.weights)
+        id2label = {int(k): str(v).lower() for k, v in model.config.id2label.items()}
+
+        def predict(img):
+            h, w = img.shape[:2]
+            inputs = proc(images=Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB)),
+                          return_tensors="pt").to(args.device)
+            with torch.no_grad():
+                out = model(**inputs)
+            r = proc.post_process_object_detection(out, target_sizes=[(h, w)], threshold=args.score_thr)[0]
+            names = np.array([id2label.get(int(lab), "") for lab in r["labels"].cpu().numpy()])
+            return r["boxes"].cpu().numpy(), r["scores"].cpu().numpy(), names
+        return predict
+
+    raise SystemExit(f"unknown --family {args.family}")
+
+
+# ───────────────────── palm classifier (same as eval_palm_classifier.py) ─────────────────────
+def load_model(weights: str, num_outputs: int, device):
+    import torch
+    from torchvision.models import resnet18
+
+    obj = torch.load(weights, map_location=device, weights_only=False)
+    if isinstance(obj, torch.nn.Module):
+        model = obj
+    else:
+        state = obj
+        for key in ("state_dict", "model_state_dict", "model"):
+            if isinstance(state, dict) and key in state and isinstance(state[key], dict):
+                state = state[key]
+        state = {k.removeprefix("module.").removeprefix("model."): v for k, v in state.items()}
+        model = resnet18(weights=None)
+        model.fc = torch.nn.Linear(model.fc.in_features, num_outputs)
+        missing, unexpected = model.load_state_dict(state, strict=False)
+        if missing or unexpected:
+            raise SystemExit(f"weights do not match a ResNet-18 with {num_outputs} outputs.\n"
+                             f"  missing: {missing[:5]}\n  unexpected: {unexpected[:5]}\n"
+                             "Check NUM_OUTPUTS, or whether the fc layer had another structure.")
+    return model.to(device).eval()
 
 
 def list_videos(paths: list[str]) -> list[Path]:
@@ -103,12 +176,11 @@ def palm_predictor(weights: str, num_outputs: int, palm_index: int, img_size: in
     """-> f(frame_bgr) -> P(palm), same preprocessing as eval_palm_classifier.py"""
     import cv2
     import torch
-    from eval_palm_classifier import MEAN, STD, load_model
 
     dev = torch.device(device)
     model = load_model(weights, num_outputs, dev)
-    mean = torch.tensor(MEAN).view(3, 1, 1)
-    std = torch.tensor(STD).view(3, 1, 1)
+    mean = torch.tensor(PALM_MEAN).view(3, 1, 1)
+    std = torch.tensor(PALM_STD).view(3, 1, 1)
 
     def predict(frame):
         rgb = cv2.cvtColor(cv2.resize(frame, (img_size, img_size), interpolation=cv2.INTER_LINEAR),

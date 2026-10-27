@@ -367,6 +367,12 @@ def run(det: dict, palm: dict | None, videos: dict, tracker_names: list[str], ou
 
 def run_settings() -> int:
     """run everything from the SETTINGS block"""
+    for v in VIDEOS:
+        if not Path(v).exists():
+            raise SystemExit(f"video folder/file not found: {v}  (set VIDEOS in SETTINGS)")
+    if PALM_CSV and not Path(PALM_CSV).is_file():
+        raise SystemExit(f"palm.csv not found: {PALM_CSV}\n  run video_dump.py with PALM_WEIGHTS set, "
+                         "or set PALM_CSV = \"\" in SETTINGS to run without the palm gate")
     videos = find_videos(VIDEOS)
     palm = load_palm(PALM_CSV) if PALM_CSV else None
     if PALM_CSV and not palm:

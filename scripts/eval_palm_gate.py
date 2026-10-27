@@ -34,8 +34,13 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from compare_trackers import VIDEO_REGEX  # noqa: E402
-from eval_palm_classifier import THRESHOLD, report  # noqa: E402
+try:
+    from eval_palm_classifier import THRESHOLD, report  # noqa: E402
+except ImportError as e:
+    raise SystemExit("eval_palm_gate.py needs eval_palm_classifier.py in the same folder "
+                     f"({Path(__file__).resolve().parent}) - copy it there") from e
+
+VIDEO_REGEX = r"(?P<video>.+)_frame_(?P<frame>\d+)"   # how video name and frame number appear in keyframe names
 
 # ============================================================================
 # SETTINGS - edit these and run:  python scripts/eval_palm_gate.py
