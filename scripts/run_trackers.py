@@ -343,6 +343,13 @@ def run(det: dict, palm: dict | None, videos: dict, tracker_names: list[str], ou
         if need_frames and v not in videos:
             raise SystemExit(f"video file for {v!r} not found in --videos (needed by {[t.name for t in trackers]})")
         n_frames = max(list(det.get(v, {})) + list((palm or {}).get(v, {})) + [-1]) + 1
+        if palm is not None:
+            pv = np.array(list(palm.get(v, {}).values()))
+            if len(pv) == 0:
+                print(f"  WARNING {v}: no rows in palm.csv for this video -> every frame is gated (check the name)")
+            else:
+                print(f"  {v}: P(palm) min {pv.min():.3f}  median {np.median(pv):.3f}  max {pv.max():.3f}  "
+                      f">= {palm_thr}: {(pv >= palm_thr).mean():.1%} of {len(pv)} frames")
         for t in trackers:
             t.reset()
         gated = 0
