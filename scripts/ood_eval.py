@@ -2,35 +2,36 @@
 """Score every compared model on a test set (manual COCO annotations): every image in the
 annotation json is evaluated - images without acupoints too (any box there is a false positive).
 
+NO score threshold is used: every saved detection is considered, so no model gets an advantage
+from a threshold choice. (Make sure the prediction files were saved with a very low confidence,
+e.g. YOLO conf=0.001 - a cut made when the predictions were saved cannot be undone here.)
+
 EASIEST: fill in the SETTINGS block below and run   python ood_eval.py
 It runs two protocols, each with and without laogong, box (IoU) and point (centre) matching:
-  standard   AP from ALL saved detections (threshold-free, COCO style), missed point = FN,
-             every box kept                              -> the main, comparable numbers
-  operating  P / R / F1 at each model's own threshold (choose it on the VALIDATION set),
-             best box per acupoint per image (like the pipeline), missed point = FN
+  best_box   only the HIGHEST-SCORE box of each acupoint in each image is kept (like the
+             pipeline: one location per point), missed point = FN   -> main comparison
+  all_boxes  every saved box is kept (standard COCO mAP), missed point = FN
 and writes OUT_ROOT/<protocol>/<points>/<iou|center>/summary.md, summary.csv, per_class.csv.
 
-Or from the terminal:
+Or from the terminal (same defaults: no threshold, best box only, missed = FN):
     python ood_eval.py --ann external.coco.json \
         --pred GroundingDINO=preds/GroundingDINO.json --pred GLIP=preds/GLIP.json \
         --pred YOLOv8=preds/YOLOv8.json --pred YOLO11=preds/YOLO11.json \
         --pred YOLO26=preds/YOLO26.json --pred RT-DETR=preds/RT-DETR.json \
-        --thr 0.15 --ref GroundingDINO --out ood_results
+        --ref GroundingDINO --out ood_results
 
 Matching (--match):
   iou     box overlap, COCO-style: hit if IoU >= 0.5   -> AP50, AP75, AP50:95
   center  point localisation: hit if the predicted box CENTRE is within alpha x (diagonal of the
           true box) of the true centre                -> AP@a0.5 (main), AP@a0.25 (strict), AP@a0.25:1.0
   both    (default) runs both and writes <out>/iou and <out>/center
-Only boxes with score >= --thr (one value, or NAME=thr) are evaluated - for AP AND for P/R/F1 -
-and of those only the BEST (highest-score) box of each point in each image (--keep-all keeps all).
-Every true point is scored, for every model, so all models are evaluated on the same points.
-A MISSED point (true point with no box >= thr in that image) is handled by --missed:
-  fp    (default) counted like a wrongly placed box: one FP (precision) AND one FN (recall)
-  fn    standard detection metric: FN only (lowers recall, not precision)
+With best_box, each model gives at most ONE box per acupoint per image, so P / R / F1 compare
+"where the model puts each point": TP = best box on the right place, FP = best box on the wrong
+place (or on an image without that point), FN = true point not found.
+A MISSED point (true point with no box at all in that image) is handled by --missed:
+  fn    (default) standard detection metric: FN only (lowers recall, not precision)
+  fp    counted like a wrongly placed box: one FP (precision) AND one FN (recall)
   skip  left out of the evaluation (reported as "skipped"; models then differ in points scored)
-So with --missed fp, a model that puts 4 boxes (3 right, 1 wrong) and a model that puts 3 right
-boxes and misses the 4th get the same P and R.
 Per model and per acupoint (COCO greedy matching, 101-point AP):
   AP at three strictness levels, Precision, Recall, F1
 Whole model:
@@ -59,25 +60,22 @@ DEFAULT_CLASSES = ["yuji", "laogong", "zhongchong", "shaofu"]
 # ============================================================================
 # SETTINGS - edit these and run:  python ood_eval.py
 # ============================================================================
-ANN_JSON = r"/home/suhel.khan/TCM/dataset/TCM_new_data/external_test/_annotations.coco.json"  # ground truth
+ANN_JSON = r"/home/suhel.khan/TCM/dataset/TCM_new_data/d2/external_test_img_d2.coco/train/_annotations.coco.json"  # ground truth
 PREDS = {   # model name : prediction file (COCO results list, ood_predict.py output, or COCO json with scores)
-    "GroundingDINO": r"/home/suhel.khan/TCM/For_Videos/preds/GroundingDINO.json",
-    "GLIP":          r"/home/suhel.khan/TCM/For_Videos/preds/GLIP.json",
-    "YOLOv8m":       r"/home/suhel.khan/TCM/For_Videos/preds/YOLOv8.json",
-    "YOLOv11m":      r"/home/suhel.khan/TCM/For_Videos/preds/YOLO11.json",
-    "YOLOv26m":      r"/home/suhel.khan/TCM/For_Videos/preds/YOLO26.json",
-    "RT-DETR":       r"/home/suhel.khan/TCM/For_Videos/preds/RT-DETR.json",
+    "GroundingDINO": r"/home/suhel.khan/TCM/dataset/TCM_new_data/d2/external_test_img_d2.coco/GD_predictions.coco.json",
+    "GLIP":          r"/home/suhel.khan/TCM/dataset/TCM_new_data/d2/external_test_img_d2.coco/GLIP_predictions.coco.json",
+    "YOLOv8m":       r"/home/suhel.khan/TCM/dataset/TCM_new_data/d2/external_test_img_d2.coco/YOLO8.json",
+    "YOLOv11m":      r"/home/suhel.khan/TCM/dataset/TCM_new_data/d2/external_test_img_d2.coco/YOLO11.json",
+    "YOLOv26m":      r"/home/suhel.khan/TCM/dataset/TCM_new_data/d2/external_test_img_d2.coco/YOLO26.json",
+    "RT-DETR":       r"/home/suhel.khan/TCM/dataset/TCM_new_data/d2/external_test_img_d2.coco/RT-DETR.json",
 }
 OUT_ROOT = r"/home/suhel.khan/TCM/For_Videos/ood_results"
 REF_MODEL = "GroundingDINO"          # paired differences of every model vs this one ("" = none)
 
-# operating thresholds per model - choose them on the VALIDATION set (e.g. best F1 there), not on this test set
-OPERATING_THR = {"GroundingDINO": 0.15, "GLIP": 0.15, "YOLOv8m": 0.25, "YOLOv11m": 0.25,
-                 "YOLOv26m": 0.25, "RT-DETR": 0.25}
 PROTOCOLS = {
-    #             thr: one value or {model: thr}; missed: fn (standard) / fp / skip; best_only: one box per point
-    "standard":  dict(thr=0.0, missed="fn", best_only=False),
-    "operating": dict(thr=OPERATING_THR, missed="fn", best_only=True),
+    #   thr 0.0 = no threshold; missed: fn (standard) / fp / skip; best_only: keep only the best box per point
+    "best_box":  dict(thr=0.0, missed="fn", best_only=True),
+    "all_boxes": dict(thr=0.0, missed="fn", best_only=False),
 }
 POINT_SUBSETS = {
     "all_points": ["yuji", "laogong", "zhongchong", "shaofu"],
@@ -221,6 +219,11 @@ def load_pred(path: str, name_of: dict, classes: list[str], gt_images: list | No
         print(f"WARNING: {path}: predictions without 'score' are treated as score 1.0 - AP is not meaningful",
               file=sys.stderr)
         res = [{**r, "score": r.get("score", 1.0)} for r in res]
+    if res:
+        lo = min(r["score"] for r in res)
+        print(f"note: {path}: {len(res)} boxes, lowest score {lo:.3f}"
+              + (" - predictions were saved with a confidence cut; re-save them with a very low confidence "
+                 "(e.g. 0.001) for a threshold-free comparison" if lo > 0.05 else ""), file=sys.stderr)
     pred = defaultdict(lambda: {c: ([], []) for c in classes})
     for r in res:
         c = name_of.get(r["category_id"])
@@ -400,7 +403,9 @@ def report(mode, models, recs, res, boot, thrs, classes, ref, out_dir, n_boot, m
     scope = {"fp": "missed points count as FP and FN (every model scored on the same points)",
              "fn": "missed points count as FN",
              "skip": "missed points skipped (only detected points scored)"}[missed]
-    boxes = "the best box of each point per image with score >= thr" if best_only else "boxes with score >= thr"
+    no_thr = all(t <= 0 for t in thrs.values())
+    boxes = ("the best (highest-score) box of each point per image" if best_only else "every saved box") + \
+        (", no score threshold" if no_thr else ", score >= thr")
     print(f"  evaluated: {boxes}; {scope}")
     md = [f"Matching: a prediction is correct if {cfg['hit']}. Evaluated: {boxes}; {scope}.", "",
           f"| Model | thr | {label['mAP']} | {label['mAP_mean']} | Precision | Recall | F1 |",
@@ -492,7 +497,7 @@ def run_settings() -> int:
     written = []
     for proto, cfg in PROTOCOLS.items():
         thr = cfg["thr"]
-        thrs = {m: float(thr.get(m, 0.15)) if isinstance(thr, dict) else float(thr) for m in preds}
+        thrs = {m: float(thr.get(m, 0.0)) if isinstance(thr, dict) else float(thr) for m in preds}
         for subset, pts in POINT_SUBSETS.items():
             out = os.path.join(OUT_ROOT, proto, subset)
             print(f"\n{'=' * 100}\n  PROTOCOL {proto}  |  {subset}  |  thresholds {thrs}\n{'=' * 100}")
@@ -509,13 +514,13 @@ def main(argv=None) -> int:
     ap.add_argument("--pred", action="append", required=True, metavar="NAME=preds.json")
     ap.add_argument("--classes", nargs="+", default=DEFAULT_CLASSES)
     ap.add_argument("--thr", action="append", default=[],
-                    help="score threshold: only boxes >= thr are evaluated (AP and P/R/F1); one value for all, "
-                         "or NAME=value (repeatable)")
+                    help="score threshold (default 0 = no threshold): only boxes >= thr are evaluated; one value "
+                         "for all, or NAME=value (repeatable)")
     ap.add_argument("--keep-all", action="store_true",
                     help="evaluate every box >= thr instead of only the best box of each point per image")
-    ap.add_argument("--missed", choices=["fp", "fn", "skip"], default="fp",
-                    help="true point with no box above thr: fp = count as FP and FN (default, same points for "
-                         "every model); fn = FN only (standard); skip = leave it out")
+    ap.add_argument("--missed", choices=["fp", "fn", "skip"], default="fn",
+                    help="true point with no box above thr: fn = FN only (default, standard); fp = count as "
+                         "FP and FN; skip = leave it out")
     ap.add_argument("--match", choices=["iou", "center", "both"], default="both",
                     help="iou = box overlap (COCO); center = predicted centre near the true centre; both = report both")
     ap.add_argument("--bootstrap", type=int, default=1000, help="0 = no CIs")
@@ -527,7 +532,7 @@ def main(argv=None) -> int:
     if bad:
         raise SystemExit(f"--pred must be NAME=path, e.g. --pred GroundingDINO=preds.json (got {bad})")
     models = dict(p.split("=", 1) for p in args.pred)
-    thrs = {m: 0.15 for m in models}
+    thrs = {m: 0.0 for m in models}
     for t in args.thr:
         if "=" in t:
             k, v = t.split("=", 1)
