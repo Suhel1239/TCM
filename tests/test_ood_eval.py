@@ -1,3 +1,4 @@
+import csv
 import json
 import sys
 from pathlib import Path
@@ -156,3 +157,33 @@ def test_pred_without_name_gives_clear_error(tmp_path):
     (tmp_path / "gt.json").write_text(json.dumps(gt))
     with pytest.raises(SystemExit, match="NAME=path"):
         ood_eval.main(["--ann", str(tmp_path / "gt.json"), "--pred", "preds.json"])
+
+
+def test_settings_mode_both_protocols_and_file_name_matching(tmp_path, monkeypatch):
+    gt = make_gt()
+    (tmp_path / "gt.json").write_text(json.dumps(gt))
+    good = preds_from(gt)["results"]
+    # a full COCO json with its OWN image ids (+100) -> must be matched to the ground truth by file name
+    shifted = {"images": [dict(im, id=im["id"] + 100) for im in gt["images"]],
+               "categories": gt["categories"],
+               "annotations": [dict(r, image_id=r["image_id"] + 100) for r in good]}
+    (tmp_path / "a.json").write_text(json.dumps(good))
+    (tmp_path / "b.json").write_text(json.dumps(shifted))
+    monkeypatch.setattr(ood_eval, "ANN_JSON", str(tmp_path / "gt.json"))
+    monkeypatch.setattr(ood_eval, "PREDS", {"A": str(tmp_path / "a.json"), "B": str(tmp_path / "b.json"),
+                                             "C": str(tmp_path / "missing.json")})
+    monkeypatch.setattr(ood_eval, "OUT_ROOT", str(tmp_path / "out"))
+    monkeypatch.setattr(ood_eval, "REF_MODEL", "A")
+    monkeypatch.setattr(ood_eval, "N_BOOTSTRAP", 20)
+    monkeypatch.setattr(ood_eval, "PROTOCOLS", {"standard": dict(thr=0.0, missed="fn", best_only=False),
+                                                "operating": dict(thr={"A": 0.2, "B": 0.2}, missed="fn",
+                                                                  best_only=True)})
+    assert ood_eval.run_settings() == 0
+    for proto in ("standard", "operating"):
+        for sub in ("all_points", "without_laogong"):
+            rows = list(csv.DictReader(open(tmp_path / "out" / proto / sub / "iou" / "summary.csv")))
+            a, b = (r for r in rows if r["model"] in ("A", "B"))
+            assert {r["model"] for r in rows} == {"A", "B"}
+            assert float(a["mAP50"]) == pytest.approx(1.0) and float(b["mAP50"]) == pytest.approx(1.0)
+    pc = list(csv.DictReader(open(tmp_path / "out" / "standard" / "without_laogong" / "iou" / "per_class.csv")))
+    assert {r["point"] for r in pc} == {"yuji", "zhongchong", "shaofu"}

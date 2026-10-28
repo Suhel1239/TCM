@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
-"""Score every compared model on the external / OOD test set (manual COCO annotations).
+"""Score every compared model on a test set (manual COCO annotations): every image in the
+annotation json is evaluated - images without acupoints too (any box there is a false positive).
 
+EASIEST: fill in the SETTINGS block below and run   python ood_eval.py
+It runs two protocols, each with and without laogong, box (IoU) and point (centre) matching:
+  standard   AP from ALL saved detections (threshold-free, COCO style), missed point = FN,
+             every box kept                              -> the main, comparable numbers
+  operating  P / R / F1 at each model's own threshold (choose it on the VALIDATION set),
+             best box per acupoint per image (like the pipeline), missed point = FN
+and writes OUT_ROOT/<protocol>/<points>/<iou|center>/summary.md, summary.csv, per_class.csv.
+
+Or from the terminal:
     python ood_eval.py --ann external.coco.json \
         --pred GroundingDINO=preds/GroundingDINO.json --pred GLIP=preds/GLIP.json \
         --pred YOLOv8=preds/YOLOv8.json --pred YOLO11=preds/YOLO11.json \
@@ -45,6 +55,37 @@ from collections import Counter, defaultdict
 import numpy as np
 
 DEFAULT_CLASSES = ["yuji", "laogong", "zhongchong", "shaofu"]
+
+# ============================================================================
+# SETTINGS - edit these and run:  python ood_eval.py
+# ============================================================================
+ANN_JSON = r"/home/suhel.khan/TCM/dataset/TCM_new_data/external_test/_annotations.coco.json"  # ground truth
+PREDS = {   # model name : prediction file (COCO results list, ood_predict.py output, or COCO json with scores)
+    "GroundingDINO": r"/home/suhel.khan/TCM/For_Videos/preds/GroundingDINO.json",
+    "GLIP":          r"/home/suhel.khan/TCM/For_Videos/preds/GLIP.json",
+    "YOLOv8m":       r"/home/suhel.khan/TCM/For_Videos/preds/YOLOv8.json",
+    "YOLOv11m":      r"/home/suhel.khan/TCM/For_Videos/preds/YOLO11.json",
+    "YOLOv26m":      r"/home/suhel.khan/TCM/For_Videos/preds/YOLO26.json",
+    "RT-DETR":       r"/home/suhel.khan/TCM/For_Videos/preds/RT-DETR.json",
+}
+OUT_ROOT = r"/home/suhel.khan/TCM/For_Videos/ood_results"
+REF_MODEL = "GroundingDINO"          # paired differences of every model vs this one ("" = none)
+
+# operating thresholds per model - choose them on the VALIDATION set (e.g. best F1 there), not on this test set
+OPERATING_THR = {"GroundingDINO": 0.15, "GLIP": 0.15, "YOLOv8m": 0.25, "YOLOv11m": 0.25,
+                 "YOLOv26m": 0.25, "RT-DETR": 0.25}
+PROTOCOLS = {
+    #             thr: one value or {model: thr}; missed: fn (standard) / fp / skip; best_only: one box per point
+    "standard":  dict(thr=0.0, missed="fn", best_only=False),
+    "operating": dict(thr=OPERATING_THR, missed="fn", best_only=True),
+}
+POINT_SUBSETS = {
+    "all_points": ["yuji", "laogong", "zhongchong", "shaofu"],
+    "without_laogong": ["yuji", "zhongchong", "shaofu"],
+}
+MATCH = "both"          # iou / center / both
+N_BOOTSTRAP = 1000      # 0 = no confidence intervals
+# ============================================================================
 IOU_THRS = np.round(np.arange(0.50, 1.00, 0.05), 2)
 CENTER_ALPHAS = np.array([0.5, 0.25, 0.75, 1.0])   # first = main level, second = strict level
 
@@ -147,7 +188,9 @@ def load_gt(path: str, classes: list[str]):
     return data, name_of, gt
 
 
-def load_pred(path: str, name_of: dict, classes: list[str]):
+def load_pred(path: str, name_of: dict, classes: list[str], gt_images: list | None = None):
+    """gt_images: the "images" of the ground-truth json - used to match a prediction json that has its own
+    "images" list (and possibly other image ids) to the ground truth by file name"""
     obj = json.load(open(path))
     if isinstance(obj, list):                      # COCO results list
         res = obj
@@ -155,6 +198,25 @@ def load_pred(path: str, name_of: dict, classes: list[str]):
         res = obj["results"]
     else:                                          # full COCO json whose annotations carry a "score"
         res = obj["annotations"]
+    if gt_images is not None and isinstance(obj, dict) and obj.get("images"):
+        gt_by_name = {os.path.basename(im["file_name"]): im["id"] for im in gt_images}
+        to_gt = {im["id"]: gt_by_name.get(os.path.basename(im["file_name"])) for im in obj["images"]}
+        if any(to_gt[k] != k for k in to_gt if to_gt[k] is not None) or None in to_gt.values():
+            n_lost = sum(v is None for v in to_gt.values())
+            print(f"note: {path}: image ids matched to the ground truth by file name"
+                  + (f" ({n_lost} prediction images not in the ground truth, ignored)" if n_lost else ""),
+                  file=sys.stderr)
+            res = [{**r, "image_id": to_gt.get(r["image_id"])} for r in res if to_gt.get(r["image_id"]) is not None]
+    if gt_images is not None:
+        gt_ids = {im["id"] for im in gt_images}
+        pred_ids = {r["image_id"] for r in res}
+        if res and not pred_ids & gt_ids:
+            raise SystemExit(f"{path}: no prediction image_id matches the ground-truth image ids - "
+                             "were the predictions made on another json?")
+        n_none = len(gt_ids - pred_ids)
+        if n_none:
+            print(f"note: {path}: {n_none} of {len(gt_ids)} test images have no prediction (still evaluated)",
+                  file=sys.stderr)
     if res and any("score" not in r for r in res):
         print(f"WARNING: {path}: predictions without 'score' are treated as score 1.0 - AP is not meaningful",
               file=sys.stderr)
@@ -387,6 +449,60 @@ def report(mode, models, recs, res, boot, thrs, classes, ref, out_dir, n_boot, m
     print(f"\nsaved {out_dir}/summary.csv, per_class.csv, summary.md")
 
 
+def evaluate_all(ann: str, pred_paths: dict, classes: list[str], thrs: dict, missed: str = "fn",
+                 best_only: bool = False, match: str = "both", n_boot: int = 1000, ref: str | None = None,
+                 out: str = "ood_results", data_gt=None) -> dict:
+    """evaluate every model in pred_paths {name: path} on all images of the ground-truth json"""
+    classes = [c.lower() for c in classes]
+    data, name_of, gt = data_gt if data_gt else load_gt(ann, classes)
+    if data_gt:
+        gt = {im: {c: v for c, v in pts.items() if c in classes} for im, pts in gt.items()}
+    image_ids = [im["id"] for im in data["images"]]
+    os.makedirs(out, exist_ok=True)
+    describe(data, defaultdict(lambda: {c: [] for c in classes}, gt), classes)
+    preds = {name: load_pred(path, name_of, classes, data["images"]) for name, path in pred_paths.items()}
+    modes = ["iou", "center"] if match == "both" else [match]
+    results = {}
+    for mode in modes:
+        recs, res = {}, {}
+        for name in pred_paths:
+            recs[name] = per_image_records(image_ids, gt, preds[name], classes, mode,
+                                           thr=thrs[name], missed=missed, best_only=best_only)
+            res[name] = metrics(recs[name], image_ids, classes, thrs[name], mode)
+        boot = bootstrap(recs, image_ids, classes, thrs, n_boot, mode=mode) if n_boot else None
+        out_dir = os.path.join(out, mode) if len(modes) > 1 else out
+        report(mode, list(pred_paths), recs, res, boot, thrs, classes, ref, out_dir, n_boot,
+               missed=missed, best_only=best_only)
+        results[mode] = res
+    return results
+
+
+def run_settings() -> int:
+    """run every protocol x point subset from the SETTINGS block"""
+    missing = [f"{n}: {p}" for n, p in PREDS.items() if not os.path.isfile(p)]
+    if not os.path.isfile(ANN_JSON):
+        raise SystemExit(f"ANN_JSON not found: {ANN_JSON}")
+    preds = {n: p for n, p in PREDS.items() if os.path.isfile(p)}
+    for m in missing:
+        print(f"prediction file not found, model left out -> {m}", file=sys.stderr)
+    if not preds:
+        raise SystemExit("no prediction file found - check PREDS")
+    ref = REF_MODEL if REF_MODEL in preds else None
+    data_gt = load_gt(ANN_JSON, DEFAULT_CLASSES)
+    written = []
+    for proto, cfg in PROTOCOLS.items():
+        thr = cfg["thr"]
+        thrs = {m: float(thr.get(m, 0.15)) if isinstance(thr, dict) else float(thr) for m in preds}
+        for subset, pts in POINT_SUBSETS.items():
+            out = os.path.join(OUT_ROOT, proto, subset)
+            print(f"\n{'=' * 100}\n  PROTOCOL {proto}  |  {subset}  |  thresholds {thrs}\n{'=' * 100}")
+            evaluate_all(ANN_JSON, preds, pts, thrs, cfg["missed"], cfg["best_only"], MATCH, N_BOOTSTRAP,
+                         ref, out, data_gt)
+            written.append(out)
+    print("\nresults:\n  " + "\n  ".join(f"{w}/<iou|center>/summary.md" for w in written))
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ann", required=True)
@@ -407,9 +523,6 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default="ood_results")
     args = ap.parse_args(argv)
 
-    classes = [c.lower() for c in args.classes]
-    data, name_of, gt = load_gt(args.ann, classes)
-    image_ids = [im["id"] for im in data["images"]]
     bad = [p for p in args.pred if "=" not in p]
     if bad:
         raise SystemExit(f"--pred must be NAME=path, e.g. --pred GroundingDINO=preds.json (got {bad})")
@@ -423,25 +536,10 @@ def main(argv=None) -> int:
             thrs = {m: float(t) for m in models}
     if args.ref and args.ref not in models:
         raise SystemExit(f"--ref {args.ref} is not one of {list(models)}")
-
-    os.makedirs(args.out, exist_ok=True)
-    describe(data, gt, classes)
-    preds = {name: load_pred(path, name_of, classes) for name, path in models.items()}
-
-    modes = ["iou", "center"] if args.match == "both" else [args.match]
-    for mode in modes:
-        recs, res = {}, {}
-        for name in models:
-            recs[name] = per_image_records(image_ids, gt, preds[name], classes, mode,
-                                           thr=thrs[name], missed=args.missed,
-                                           best_only=not args.keep_all)
-            res[name] = metrics(recs[name], image_ids, classes, thrs[name], mode)
-        boot = bootstrap(recs, image_ids, classes, thrs, args.bootstrap, mode=mode) if args.bootstrap else None
-        out_dir = os.path.join(args.out, mode) if len(modes) > 1 else args.out
-        report(mode, models, recs, res, boot, thrs, classes, args.ref, out_dir, args.bootstrap,
-               missed=args.missed, best_only=not args.keep_all)
+    evaluate_all(args.ann, models, args.classes, thrs, args.missed, not args.keep_all, args.match,
+                 args.bootstrap, args.ref, args.out)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run_settings() if len(sys.argv) == 1 else main())
