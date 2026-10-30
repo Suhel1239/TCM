@@ -35,10 +35,10 @@ import numpy as np
 # ============================================================================
 # SETTINGS - must match how the classifier was trained
 # ============================================================================
-WEIGHTS = r"path/to/resnet18_palm.pth"
-DATA_DIR = r"path/to/palm_eval"     # contains PALM_DIR and NON_PALM_DIR sub-folders
-OUT_DIR = r"palm_eval_results"
-PALM_DIR, NON_PALM_DIR = "palm", "non_palm"
+WEIGHTS = r"/home/suhel.khan/TCM/scratch/Palm_Dataset/resnet_palm_classifier.pth"
+DATA_DIR = r"/home/suhel.khan/TCM/scratch/Palm_Dataset/test"     # contains PALM_DIR and NON_PALM_DIR sub-folders
+OUT_DIR = r"/home/suhel.khan/TCM/scratch/Palm_Dataset/results_model_evaluation"
+PALM_DIR, NON_PALM_DIR = "Palm", "Not_Palm"
 NUM_OUTPUTS = 2       # 2 = softmax over 2 classes, 1 = single logit with sigmoid
 PALM_INDEX = 1        # output index of "palm" (ImageFolder sorts alphabetically: non_palm=0, palm=1)
 IMG_SIZE = 224
