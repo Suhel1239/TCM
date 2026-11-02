@@ -151,14 +151,16 @@ def main() -> int:
     fname = {im["id"]: os.path.basename(im["file_name"]) for im in data["images"]}
     models = list(PREDS)
 
-    f1 = {}
+    f1, pooled = {}, {}
     for m in models:
         pred = load_pred(PREDS[m], name_of, data["images"])
-        vals = []
+        vals, tot = [], np.zeros(3, int)
         for i in ids:
             tp, fp, fn = image_counts(gt[i], pred.get(i))
+            tot += (tp, fp, fn)
             vals.append(1.0 if tp + fp + fn == 0 else 2 * tp / (2 * tp + fp + fn))
         f1[m] = np.array(vals)
+        pooled[m] = tot
 
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(os.path.join(OUT_DIR, "per_image_f1.csv"), "w", newline="") as f:
@@ -168,6 +170,13 @@ def main() -> int:
             w.writerow([i, fname[i]] + [f"{f1[m][k]:.4f}" for m in models])
 
     lines = [f"{len(ids)} images | classes {CLASSES} | match {MATCH} | threshold {THRESHOLD} | best_only {BEST_ONLY}", ""]
+    lines.append("Pooled over all acupoints (should equal the table values computed with the same settings):")
+    lines.append(f"{'model':<15}{'TP':>6}{'FP':>6}{'FN':>6}{'P':>8}{'R':>8}{'F1':>8}")
+    for m in models:
+        tp, fp, fn = pooled[m]
+        p_, r_ = tp / max(tp + fp, 1), tp / max(tp + fn, 1)
+        lines.append(f"{m:<15}{tp:>6}{fp:>6}{fn:>6}{p_:>8.3f}{r_:>8.3f}{2 * p_ * r_ / max(p_ + r_, 1e-12):>8.3f}")
+    lines += ["", "Per image:"]
     lines.append(f"{'model':<15}{'mean F1':>9}{'median':>9}{'Shapiro W':>11}{'p':>11}")
     summ = []
     for m in models:
