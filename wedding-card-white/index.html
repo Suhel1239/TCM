@@ -214,7 +214,7 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
 .gate.open .seal-ring, .gate.open .shine, .gate.open .gate-title { opacity: 0; transition: opacity .3s; }
 .gate-frame { position: absolute; inset: 14px; border: 1px solid var(--gold-light); outline: 1px solid var(--gold-light); outline-offset: 5px; pointer-events: none; }
 
-.env { position: relative; width: min(86vw, 500px); aspect-ratio: 7 / 5; perspective: 1200px; transition: transform .8s cubic-bezier(.5,0,.3,1) .9s, opacity .6s ease 1s; }
+.env { position: relative; z-index: 2; width: min(86vw, 500px); aspect-ratio: 7 / 5; perspective: 1200px; transition: transform .8s cubic-bezier(.5,0,.3,1) .9s, opacity .6s ease 1s; }
 .env-back, .env-front, .letter, .flap { position: absolute; left: 0; right: 0; }
 .env-back { inset: 0; background: linear-gradient(160deg, #ffffff, #f6efdf); border: 1px solid var(--gold-light); box-shadow: 0 30px 50px -24px rgba(138,100,32,.45); }
 .env-back::before {         /* gold liner visible inside once the flap lifts */
@@ -311,6 +311,21 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
   .replay { padding: 8px 12px; font-size: 1rem; letter-spacing: 0; }
   .replay-text { display: none; }
 }
+/* minarets standing on both sides of the opening screen */
+.minarets { position: absolute; bottom: 16px; display: flex; align-items: flex-end; gap: 6px; pointer-events: none; z-index: 1;
+  filter: drop-shadow(0 0 14px rgba(232,200,120,.45)); }
+.minarets.left { left: 3%; }
+.minarets.right { right: 3%; }
+.minarets svg { display: block; overflow: visible; }
+.minarets .m1 { height: min(64vh, 560px); width: calc(min(64vh, 560px) * .15); }
+.minarets .m2 { height: min(46vh, 400px); width: calc(min(46vh, 400px) * .15); }
+@media (max-width: 520px) {
+  .minarets { gap: 2px; }
+  .minarets.left { left: 1%; }
+  .minarets.right { right: 1%; }
+  .minarets .m1 { height: 30vh; width: 4.5vh; }
+  .minarets .m2 { height: 22vh; width: 3.3vh; }
+}
 @media (prefers-reduced-motion: reduce) {
   .foil, .seal::after, .seal-gleam::before, .glow, .shine::before, .seal-ring, .gate-title .ur, .gate-hint { animation: none; }
 }
@@ -320,6 +335,30 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
 
 <div class="gate" id="gate" role="button" tabindex="0" aria-label="Open the invitation">
   <div class="glow" aria-hidden="true"></div>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="minFill" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f3e7c8"/><stop offset=".45" stop-color="#fffbf1"/><stop offset="1" stop-color="#eadbb4"/></linearGradient>
+      <symbol id="minaret" viewBox="0 0 60 400">
+        <g stroke="#b8913f" stroke-width="1.2" fill="url(#minFill)" stroke-linejoin="round">
+          <path d="M30 4 V22" fill="none"/>
+          <path d="M18 62 Q16 44 30 24 Q44 44 42 62 Z"/>
+          <path d="M13 62 H47 L44 70 H16 Z"/>
+          <path d="M20 70 H40 V140 H20 Z"/>
+          <path d="M26 92 Q26 84 30 82 Q34 84 34 92 V112 H26 Z" fill="#f3e2ae"/>
+          <path d="M10 140 H50 L45 152 H15 Z"/>
+          <path d="M15 152 L17 158 M23 152 L24 158 M37 152 L36 158 M45 152 L43 158" fill="none"/>
+          <path d="M17 152 H43 L45 352 H15 Z"/>
+          <path d="M26 190 Q26 182 30 180 Q34 182 34 190 V214 H26 Z M26 262 Q26 254 30 252 Q34 254 34 262 V286 H26 Z" fill="#f3e2ae"/>
+          <path d="M16 236 H44 M15 310 H45" fill="none"/>
+          <path d="M8 352 H52 V400 H8 Z"/>
+          <path d="M22 400 V378 Q22 366 30 364 Q38 366 38 378 V400" fill="#f3e2ae"/>
+        </g>
+        <circle cx="30" cy="8" r="4" fill="#d4ad55"/><circle cx="32" cy="7" r="3.4" fill="#fbf8f1"/>
+      </symbol>
+    </defs>
+  </svg>
+  <div class="minarets left" aria-hidden="true"><svg class="m1"><use href="#minaret"/></svg><svg class="m2"><use href="#minaret"/></svg></div>
+  <div class="minarets right" aria-hidden="true"><svg class="m2"><use href="#minaret"/></svg><svg class="m1"><use href="#minaret"/></svg></div>
   <div class="gate-frame" aria-hidden="true"></div>
   <svg class="gate-corner tl" viewBox="0 0 100 100" aria-hidden="true"><use href="#cornerArt"/></svg>
   <svg class="gate-corner tr" viewBox="0 0 100 100" aria-hidden="true"><use href="#cornerArt"/></svg>
