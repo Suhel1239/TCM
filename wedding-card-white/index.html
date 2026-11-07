@@ -1,15 +1,15 @@
 <!doctype html>
-<html lang="en">
+<html lang="ur">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Seraj Khan weds Nargish · Fahim Khan weds Shahiba</title>
+<title>شادی مبارک · Seraj Khan weds Nargish · Fahim Khan weds Shahiba</title>
 <meta name="description" content="Shaadi Mubarak! Nikah on 30 &amp; 31 December 2026, Walima on 1 January 2027 · Kaulachhapar, Deoria. Tap to open the card.">
 <meta name="theme-color" content="#fbf8f1">
 <meta name="robots" content="noindex, nofollow">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://suhel1239.github.io/TCM/wedding-card-white/">
-<meta property="og:title" content="Seraj Khan weds Nargish · Fahim Khan weds Shahiba">
+<meta property="og:title" content="شادی مبارک · Seraj Khan weds Nargish · Fahim Khan weds Shahiba">
 <meta property="og:description" content="Shaadi Mubarak! Nikah on 30 &amp; 31 December 2026, Walima on 1 January 2027 · Kaulachhapar, Deoria. Tap to open the card.">
 <meta property="og:image" content="https://suhel1239.github.io/TCM/wedding-card-white/preview.jpg">
 <meta property="og:image:width" content="1200">
@@ -17,7 +17,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Gulzar&family=Playfair+Display:ital,wght@1,500&family=Cinzel:wght@400;500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Tiro+Devanagari+Hindi&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Gulzar&family=Noto+Nastaliq+Urdu:wght@400;600;700&family=Playfair+Display:ital,wght@1,500&family=Cinzel:wght@400;500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Tiro+Devanagari+Hindi&display=swap">
 <style>
 /* Layout: a pearl-white envelope with a gold seal opens onto a white card framed by gold corner filigree; content runs down one centred column, couples and events go side by side on wide screens. */
 :root {
@@ -35,6 +35,7 @@
   --f-body: "EB Garamond", Garamond, Georgia, serif;
   --f-arabic: "Amiri", "Traditional Arabic", serif;
   --f-urdu: "Gulzar", "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", serif;
+  --f-callig: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Gulzar", serif;   /* Nastaliq calligraphy for names and headings */
   --f-hindi: "Tiro Devanagari Hindi", "Noto Serif Devanagari", "Mangal", serif;
   color-scheme: light;
 }
@@ -100,22 +101,35 @@ body {
 
 .couples { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .pair { display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 0; }
-.name { margin: 0; font-family: var(--f-script); font-style: italic; font-weight: 500; font-size: clamp(2.2rem, 8.5vw, 3rem); line-height: 1.25; padding-inline: .1em; }
-.name-urdu { font-family: var(--f-urdu); font-size: 1.2rem; line-height: 1.8; color: var(--ink-soft); direction: rtl; margin-top: 10px; }
-.parent { margin: 4px 0 0; font-size: .88rem; color: var(--ink-soft); }
+.name { margin: 0; font-family: var(--f-callig); font-weight: 700; font-size: clamp(2.3rem, 9vw, 3.2rem); line-height: 2.1; direction: rtl; padding: .15em .35em .45em; }
+.name-en { font-family: var(--f-script); font-style: italic; font-weight: 500; font-size: 1.05rem; color: var(--ink-soft); margin-top: -.6em; letter-spacing: .02em; }
+.name-urdu { font-family: var(--f-callig); font-size: 1.15rem; line-height: 2.2; color: var(--ink); direction: rtl; }
+.parent { margin: 6px 0 0; display: flex; flex-direction: column; align-items: center; gap: 0; }
+.parent .ur { font-family: var(--f-callig); font-size: 1rem; line-height: 2.1; color: var(--ink); direction: rtl; }
+.parent .en { font-size: .82rem; color: var(--ink-soft); }
 .parent b { font-style: normal; font-weight: 500; color: var(--ink); }
-.weds { font-family: var(--f-caps); font-size: .78rem; letter-spacing: .3em; color: var(--gold); margin-block: 6px; display: flex; align-items: center; gap: 10px; }
+.weds { font-family: var(--f-callig); font-size: 1.15rem; line-height: 2; color: var(--gold-deep); margin-block: 4px; display: flex; align-items: center; gap: 12px; }
+.weds .wd { display: flex; flex-direction: column; align-items: center; }
+.weds small { font-family: var(--f-caps); font-size: .58rem; letter-spacing: .26em; color: var(--gold); margin-top: -.5em; }
 .weds::before, .weds::after { content: ""; width: 34px; height: 1px; background: var(--gold-light); }
-.date-tag { margin-top: 10px; font-family: var(--f-caps); font-size: .86rem; letter-spacing: .12em; color: var(--ink); padding: 6px 16px; border-top: 1px solid var(--gold-light); border-bottom: 1px solid var(--gold-light); }
+.date-tag { margin-top: 10px; display: flex; flex-direction: column; align-items: center; padding: 4px 18px 8px; border-top: 1px solid var(--gold-light); border-bottom: 1px solid var(--gold-light); }
+.date-tag .ur { font-family: var(--f-callig); font-size: 1.05rem; line-height: 2.2; color: var(--ink); direction: rtl; unicode-bidi: isolate; }
+.date-tag .en { font-family: var(--f-caps); font-size: .72rem; letter-spacing: .12em; color: var(--ink-soft); }
 .pair-sep { width: 1px; height: 36px; background: linear-gradient(var(--gold-light), var(--gold), var(--gold-light)); margin-block: 12px; }
 
 .countdown { display: flex; gap: 0; justify-content: center; border: 1px solid var(--gold-light); }
 .countdown div { min-width: 82px; padding: 10px 8px; display: flex; flex-direction: column; }
 .countdown div + div { border-left: 1px solid var(--gold-light); }
 .countdown b { font-family: var(--f-caps); font-weight: 400; font-size: 1.7rem; color: var(--gold-deep); font-variant-numeric: tabular-nums; line-height: 1.2; }
-.countdown span { font-family: var(--f-caps); font-size: .62rem; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-soft); }
+.countdown span { font-family: var(--f-callig); font-size: .82rem; line-height: 2; color: var(--ink-soft); }
+.countdown span small { display: block; font-family: var(--f-caps); font-size: .55rem; letter-spacing: .18em; text-transform: uppercase; line-height: 1; }
 
-h2 { margin: 0; font-family: var(--f-caps); font-weight: 400; font-size: 1.05rem; letter-spacing: .22em; text-transform: uppercase; }
+h2.sec { margin: 0; display: flex; flex-direction: column; align-items: center; font-weight: 400; }
+h2.sec .ur { font-family: var(--f-callig); font-weight: 700; font-size: 1.9rem; line-height: 2.1; direction: rtl; padding: .1em .3em .35em; }
+h2.sec .en { font-family: var(--f-caps); font-size: .7rem; letter-spacing: .26em; text-transform: uppercase; color: var(--gold-deep); margin-top: -.5em; }
+.lbl { display: flex; flex-direction: column; align-items: center; }
+.lbl .ur { font-family: var(--f-callig); font-size: 1.15rem; line-height: 2.5; color: var(--gold-deep); direction: rtl; }
+.lbl .en { font-family: var(--f-caps); font-size: .62rem; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-soft); margin-top: 2px; }
 
 .events { width: 100%; display: grid; grid-template-columns: 1fr; gap: 16px; }
 .event { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 18px 18px; border: 1px solid var(--gold-light); background: linear-gradient(#fff, #fffcf4); min-width: 0; }
@@ -123,11 +137,14 @@ h2 { margin: 0; font-family: var(--f-caps); font-weight: 400; font-size: 1.05rem
   border: 1.5px solid var(--gold); box-shadow: 0 0 0 4px #fff, 0 0 0 5px var(--gold-light); margin-bottom: 8px; }
 .event .day b { font-family: var(--f-caps); font-weight: 500; font-size: 1.4rem; line-height: 1; color: var(--gold-deep); }
 .event .day span { font-family: var(--f-caps); font-size: .62rem; letter-spacing: .14em; color: var(--ink-soft); }
-.event h3 { margin: 0; font-family: var(--f-caps); font-weight: 500; font-size: 1rem; letter-spacing: .08em; color: var(--ink); }
-.event .u { font-family: var(--f-urdu); color: var(--gold-deep); font-size: 1.05rem; line-height: 1.8; }
+.event h3 { margin: 0; font-family: var(--f-callig); font-weight: 700; font-size: 1.4rem; line-height: 2.1; color: var(--gold-deep); direction: rtl; }
+.event .en-h { font-family: var(--f-caps); font-weight: 500; font-size: .74rem; letter-spacing: .12em; color: var(--ink); margin-top: -.3em; }
+.event .ur-p { font-family: var(--f-callig); font-size: .98rem; line-height: 2.2; color: var(--ink); direction: rtl; }
+.event .en-p { font-size: .84rem; color: var(--ink-soft); }
 .event p { margin: 0; color: var(--ink-soft); font-size: .98rem; }
-.event .weekday { font-family: var(--f-caps); font-size: .72rem; letter-spacing: .16em; color: var(--ink); }
-.hijri { font-style: italic; color: var(--gold-deep); font-size: .92rem; }
+.event .weekday { font-family: var(--f-callig); font-size: .95rem; line-height: 2; color: var(--ink); direction: rtl; }
+.event .weekday small { font-family: var(--f-caps); font-size: .62rem; letter-spacing: .16em; color: var(--ink-soft); margin-inline-start: 6px; }
+.hijri { font-family: var(--f-callig); color: var(--gold-deep); font-size: .92rem; line-height: 2.1; direction: rtl; }
 
 .venue { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .venue address { font-style: normal; color: var(--ink); }
@@ -138,13 +155,16 @@ h2 { margin: 0; font-family: var(--f-caps); font-weight: 400; font-size: 1.05rem
   box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--gold-light);
 }
 .btn:hover { background: #fffaf0; }
+.btn .ur { font-family: var(--f-callig); font-size: .95rem; letter-spacing: 0; text-transform: none; line-height: 1.6; margin-inline-end: 10px; padding-bottom: .2em; }
 .btn:focus-visible, .gate:focus-visible, .replay:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 3px; }
 
 .host { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.host-name { font-family: var(--f-caps); font-size: 1.15rem; letter-spacing: .06em; color: var(--ink); }
-.host .name-urdu { font-size: 1.05rem; }
+.host-name { font-family: var(--f-callig); font-weight: 700; font-size: 1.55rem; line-height: 2.2; direction: rtl; padding: .1em .3em .35em; }
+.host .en { font-family: var(--f-caps); font-size: .78rem; letter-spacing: .08em; color: var(--ink-soft); margin-top: -.3em; }
 .muntazir { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .muntazir p { margin: 0; max-width: 30em; color: var(--ink); text-wrap: balance; }
+.muntazir .ur { font-family: var(--f-callig); font-size: 1.1rem; line-height: 2.3; direction: rtl; }
+.muntazir .en { font-size: .84rem; color: var(--ink-soft); }
 
 /* ---------- glitter canvases ---------- */
 canvas.sky { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
@@ -162,6 +182,38 @@ body.gate-up canvas.sky { z-index: 35; }
   transition: opacity .6s ease;
 }
 .gate.fade { opacity: 0; }
+/* slow-turning gold light rays and a warm glow behind the envelope */
+.rays { position: absolute; left: 50%; top: 50%; width: 170vmax; height: 170vmax; margin: -85vmax 0 0 -85vmax; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, rgba(222,184,96,.30) 0deg 5deg, rgba(222,184,96,0) 5deg 15deg);
+  -webkit-mask-image: radial-gradient(circle, #000 0%, rgba(0,0,0,.55) 22%, transparent 48%); mask-image: radial-gradient(circle, #000 0%, rgba(0,0,0,.55) 22%, transparent 48%);
+  animation: spin 60s linear infinite; will-change: transform; }
+.glow { position: absolute; left: 50%; top: 52%; width: min(120vw, 900px); height: min(120vw, 900px); transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(255,236,180,.95) 0%, rgba(240,210,140,.45) 30%, rgba(240,210,140,0) 62%);
+  animation: breathe 3.6s ease-in-out infinite; will-change: opacity; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes breathe { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }
+.gate-title { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; margin-bottom: -18px; }
+.gate-title .ur { font-family: var(--f-callig); font-weight: 700; font-size: clamp(2.4rem, 11vw, 3.8rem); line-height: 2.1; direction: rtl; padding: .1em .4em .4em;
+  background: linear-gradient(100deg, #8a6420 0%, #b8913f 28%, #e8c56a 40%, #fff6d6 48%, #e8c56a 56%, #b8913f 70%, #8a6420 100%); background-size: 250% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: var(--gold-deep);
+  filter: drop-shadow(0 2px 6px rgba(184,145,63,.35)); animation: foil 4.5s ease-in-out infinite; }
+.gate-title .en { font-family: var(--f-caps); font-size: .72rem; letter-spacing: .36em; text-transform: uppercase; color: var(--gold-deep); margin-top: -.9em; }
+.gate-corner { position: absolute; width: 84px; height: 84px; pointer-events: none; z-index: 1; }
+.gate-corner.tl { top: 10px; left: 10px; }
+.gate-corner.tr { top: 10px; right: 10px; transform: scaleX(-1); }
+.gate-corner.bl { bottom: 10px; left: 10px; transform: scaleY(-1); }
+.gate-corner.br { bottom: 10px; right: 10px; transform: scale(-1, -1); }
+/* light sweeping across the envelope */
+.shine { position: absolute; inset: 0; z-index: 4; overflow: hidden; pointer-events: none; }
+.shine::before { content: ""; position: absolute; top: -20%; bottom: -20%; left: -60%; width: 40%;
+  background: linear-gradient(100deg, rgba(255,255,255,0), rgba(255,250,230,.85) 50%, rgba(255,255,255,0));
+  transform: translateX(0) skewX(-18deg); animation: sweep 3.8s ease-in-out infinite; will-change: transform; }
+@keyframes sweep { 0%, 45% { transform: translateX(0) skewX(-18deg); } 100% { transform: translateX(450%) skewX(-18deg); } }
+/* turning ring of gold dots around the seal */
+.seal-ring { position: absolute; left: 50%; top: 64%; z-index: 5; width: 208px; height: 208px; margin: -104px 0 0 -104px; border-radius: 50%; pointer-events: none;
+  border: 2px dotted var(--gold); animation: spin 18s linear infinite; will-change: transform; transition: opacity .3s; }
+.seal-ring::after { content: ""; position: absolute; inset: 8px; border-radius: 50%; border: 1px solid rgba(184,145,63,.45); }
+.gate.open .seal-ring, .gate.open .shine, .gate.open .gate-title { opacity: 0; transition: opacity .3s; }
 .gate-frame { position: absolute; inset: 14px; border: 1px solid var(--gold-light); outline: 1px solid var(--gold-light); outline-offset: 5px; pointer-events: none; }
 
 .env { position: relative; width: min(86vw, 500px); aspect-ratio: 7 / 5; perspective: 1200px; transition: transform .8s cubic-bezier(.5,0,.3,1) .9s, opacity .6s ease 1s; }
@@ -180,8 +232,8 @@ body.gate-up canvas.sky { z-index: 35; }
   box-shadow: 0 2px 10px rgba(138,100,32,.15);
   transition: transform .8s cubic-bezier(.3,.7,.2,1) .55s;
 }
-.letter .lt { font-family: var(--f-script); font-style: italic; font-weight: 500; font-size: clamp(.95rem, 4.3vw, 1.6rem); white-space: nowrap; line-height: 1.2; color: var(--gold-deep); }
-.letter .lk { font-family: var(--f-caps); font-size: .6rem; letter-spacing: .28em; color: var(--ink-soft); }
+.letter .lt { font-family: var(--f-callig); font-weight: 700; font-size: clamp(.95rem, 4.4vw, 1.5rem); white-space: nowrap; line-height: 2; color: var(--gold-deep); direction: rtl; }
+.letter .lk { font-family: var(--f-callig); font-size: clamp(.8rem, 3.4vw, 1rem); line-height: 1.9; color: var(--ink-soft); direction: rtl; }
 .env-front { inset: 0; z-index: 3; width: 100%; height: 100%; display: block; }
 .flap { top: 0; height: 64%; z-index: 4; transform-origin: 50% 0; transform-style: preserve-3d; transition: transform .7s cubic-bezier(.5,0,.3,1), z-index 0s linear .35s; }
 .flap svg { position: absolute; inset: 0; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
@@ -203,7 +255,10 @@ body.gate-up canvas.sky { z-index: 35; }
 .seal .seal-line { width: 84px; height: 1px; background: linear-gradient(90deg, transparent, #4a3410, transparent); opacity: .5; margin-block: 10px 6px; }
 .seal .ur { font-family: var(--f-urdu); font-size: 1.5rem; line-height: 1.7; color: #4a3410; direction: rtl; }
 
-.gate-hint { margin: 0; font-family: var(--f-caps); font-size: .78rem; letter-spacing: .34em; text-transform: uppercase; color: var(--gold-deep); transition: opacity .3s; }
+.gate-hint { position: relative; z-index: 2; margin: 0; display: flex; flex-direction: column; align-items: center; transition: opacity .3s; animation: bob 2.4s ease-in-out infinite; }
+.gate-hint .ur { font-family: var(--f-callig); font-size: 1.05rem; line-height: 2; color: var(--gold-deep); direction: rtl; }
+.gate-hint .en { font-family: var(--f-caps); font-size: .68rem; letter-spacing: .34em; text-transform: uppercase; color: var(--gold-deep); margin-top: 2px; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 
 /* open sequence: seal lifts away, flap swings up, letter rises, envelope drops away */
 .gate.open .seal { transform: translateY(-30px) scale(1.25); opacity: 0; }
@@ -224,11 +279,13 @@ body.gate-up canvas.sky { z-index: 35; }
   .card { max-width: 920px; padding: 96px 80px 72px; }
   .corner { width: 120px; height: 120px; }
   .couples { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: 32px; }
-  .couples > .label { grid-column: 1 / -1; justify-self: center; margin-bottom: 8px; }
+  .couples > .lbl { grid-column: 1 / -1; justify-self: center; margin-bottom: 8px; }
   .pair-sep { height: 70%; align-self: center; margin: 0; }
   .events { grid-template-columns: repeat(3, 1fr); }
   .env { width: 560px; }
   .seal { width: 190px; height: 190px; margin: -95px 0 0 -95px; }
+  .seal-ring { width: 236px; height: 236px; margin: -118px 0 0 -118px; }
+  .gate-corner { width: 120px; height: 120px; }
   .seal .bism { font-size: 1.15rem; }
   .seal .ur { font-size: 1.7rem; }
 }
@@ -239,6 +296,9 @@ body.gate-up canvas.sky { z-index: 35; }
   .corner { width: 70px; height: 70px; }
   .bismillah { font-size: 1.8rem; }
   .seal { width: 150px; height: 150px; margin: -75px 0 0 -75px; }
+  .seal-ring { width: 186px; height: 186px; margin: -93px 0 0 -93px; }
+  .gate-corner { width: 64px; height: 64px; }
+  .gate { gap: 30px; }
   .seal .bism { font-size: .9rem; padding-inline: 14px; }
   .seal .seal-line { width: 70px; margin-block: 8px 4px; }
   .seal .ur { font-size: 1.3rem; }
@@ -246,20 +306,27 @@ body.gate-up canvas.sky { z-index: 35; }
   .replay-text { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .foil, .seal::after { animation: none; }
+  .foil, .seal::after, .rays, .glow, .shine::before, .seal-ring, .gate-title .ur, .gate-hint { animation: none; }
 }
 </style>
 </head>
 <body>
 
 <div class="gate" id="gate" role="button" tabindex="0" aria-label="Open the invitation">
+  <div class="rays" aria-hidden="true"></div>
+  <div class="glow" aria-hidden="true"></div>
   <div class="gate-frame" aria-hidden="true"></div>
+  <svg class="gate-corner tl" viewBox="0 0 100 100" aria-hidden="true"><use href="#cornerArt"/></svg>
+  <svg class="gate-corner tr" viewBox="0 0 100 100" aria-hidden="true"><use href="#cornerArt"/></svg>
+  <svg class="gate-corner bl" viewBox="0 0 100 100" aria-hidden="true"><use href="#cornerArt"/></svg>
+  <svg class="gate-corner br" viewBox="0 0 100 100" aria-hidden="true"><use href="#cornerArt"/></svg>
+  <div class="gate-title" aria-hidden="true"><span class="ur" lang="ur">دعوتِ نکاح</span><span class="en">You are invited</span></div>
   <div class="env" aria-hidden="true">
     <div class="env-back"></div>
     <div class="letter">
-      <span class="lk">Shaadi Mubarak</span>
-      <span class="lt">Seraj Khan &amp; Nargish</span>
-      <span class="lt">Fahim Khan &amp; Shahiba</span>
+      <span class="lk" lang="ur">شادی مبارک</span>
+      <span class="lt" lang="ur">سراج خان ہمراہ نرگس</span>
+      <span class="lt" lang="ur">فہیم خان ہمراہ شاہیبہ</span>
     </div>
     <svg class="env-front" viewBox="0 0 140 100" preserveAspectRatio="none">
       <defs><linearGradient id="pocket" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#f3ead6"/></linearGradient></defs>
@@ -279,13 +346,15 @@ body.gate-up canvas.sky { z-index: 35; }
         <path d="M0 0 H140 L70 64 Z" fill="url(#flapG)"/>
       </svg>
     </div>
+    <div class="shine"></div>
+    <div class="seal-ring"></div>
     <div class="seal">
       <span class="bism" lang="ar">بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</span>
       <span class="seal-line"></span>
       <span class="ur" lang="ur">شادی مبارک</span>
     </div>
   </div>
-  <p class="gate-hint">Tap to open</p>
+  <p class="gate-hint"><span class="ur" lang="ur">کھولنے کے لیے چھوئیں</span><span class="en">Tap to open</span></p>
 </div>
 <canvas class="sky" id="sky" aria-hidden="true"></canvas>
 <canvas class="burst" id="burst" aria-hidden="true"></canvas>
@@ -343,69 +412,72 @@ body.gate-up canvas.sky { z-index: 35; }
     </div>
 
     <div class="couples">
-      <span class="label">Shaadi-e-Khana Aabadi · Insha’Allah</span>
+      <span class="lbl"><span class="ur" lang="ur">شادی خانہ آبادی · ان شاء اللہ</span><span class="en">Shaadi-e-Khana Aabadi · Insha’Allah</span></span>
       <div class="pair">
-        <h1 class="name foil">Seraj Khan</h1>
-        <div class="name-urdu" lang="ur">سراج خان</div>
-        <p class="parent">S/O Mohd Abul Hasan Khan</p>
-        <div class="weds">weds</div>
-        <h1 class="name foil">Nargish</h1>
-        <div class="name-urdu" lang="ur">نرگس</div>
-        <div class="date-tag">Wednesday · 30 December 2026</div>
+        <h1 class="name foil" lang="ur">سراج خان</h1>
+        <div class="name-en">Seraj Khan</div>
+        <p class="parent"><span class="ur" lang="ur">ولد محمد ابو الحسن خان</span><span class="en">S/O Mohd Abul Hasan Khan</span></p>
+        <div class="weds"><span class="wd"><span lang="ur">ہمراہ</span><small>WEDS</small></span></div>
+        <h1 class="name foil" lang="ur">نرگس</h1>
+        <div class="name-en">Nargish</div>
+        <div class="date-tag"><span class="ur" lang="ur">بروز بدھ، ۳۰ دسمبر ۲۰۲۶ء</span><span class="en">Wednesday · 30 December 2026</span></div>
       </div>
       <div class="pair-sep" aria-hidden="true"></div>
       <div class="pair">
-        <h1 class="name foil">Fahim Khan</h1>
-        <div class="name-urdu" lang="ur">فہیم خان</div>
-        <p class="parent">S/O Marhum Tahir Khan</p>
-        <div class="weds">weds</div>
-        <h1 class="name foil">Shahiba</h1>
-        <div class="name-urdu" lang="ur">شاہیبہ</div>
-        <div class="date-tag">Thursday · 31 December 2026</div>
+        <h1 class="name foil" lang="ur">فہیم خان</h1>
+        <div class="name-en">Fahim Khan</div>
+        <p class="parent"><span class="ur" lang="ur">ولد مرحوم طاہر خان</span><span class="en">S/O Marhum Tahir Khan</span></p>
+        <div class="weds"><span class="wd"><span lang="ur">ہمراہ</span><small>WEDS</small></span></div>
+        <h1 class="name foil" lang="ur">شاہیبہ</h1>
+        <div class="name-en">Shahiba</div>
+        <div class="date-tag"><span class="ur" lang="ur">بروز جمعرات، ۳۱ دسمبر ۲۰۲۶ء</span><span class="en">Thursday · 31 December 2026</span></div>
       </div>
     </div>
 
     <div class="countdown" id="countdown" aria-live="polite">
-      <div><b id="cd-d">85</b><span>Din</span></div>
-      <div><b id="cd-h">00</b><span>Ghante</span></div>
-      <div><b id="cd-m">00</b><span>Minute</span></div>
+      <div><b id="cd-d">85</b><span lang="ur">دن<small>Days</small></span></div>
+      <div><b id="cd-h">00</b><span lang="ur">گھنٹے<small>Hours</small></span></div>
+      <div><b id="cd-m">00</b><span lang="ur">منٹ<small>Minutes</small></span></div>
     </div>
 
-    <h2 class="foil">Taqreebat · Programme</h2>
+    <h2 class="sec"><span class="ur foil" lang="ur">تقریبات</span><span class="en">Programme</span></h2>
     <div class="events">
       <div class="event">
         <div class="day"><b>30</b><span>DEC</span></div>
-        <span class="weekday">Wednesday</span>
-        <h3>Baraat &amp; Nikah</h3>
-        <span class="u" lang="ur">نکاح</span>
-        <p>Seraj Khan weds Nargish</p>
-        <p>Nikah ba’d namaz-e-Zuhr · Dawat-e-taam to follow</p>
-        <p class="hijri" data-hijri="2026-12-30">21 Rajab 1448 AH (approx.)</p>
+        <span class="weekday" lang="ur">بدھ<small>WEDNESDAY</small></span>
+        <h3 lang="ur">بارات و نکاح</h3>
+        <span class="en-h">Baraat &amp; Nikah</span>
+        <p class="ur-p" lang="ur">سراج خان ہمراہ نرگس</p>
+        <p class="ur-p" lang="ur">نکاح بعد نمازِ ظہر · بعدہٗ طعام</p>
+        <p class="en-p">Seraj Khan weds Nargish · Nikah after Zuhr, then dinner</p>
+        <p class="hijri" lang="ur" data-hijri="2026-12-30">۲۱ رجب ۱۴۴۸ھ</p>
       </div>
       <div class="event">
         <div class="day"><b>31</b><span>DEC</span></div>
-        <span class="weekday">Thursday</span>
-        <h3>Baraat &amp; Nikah</h3>
-        <span class="u" lang="ur">نکاح</span>
-        <p>Fahim Khan weds Shahiba</p>
-        <p>Nikah ba’d namaz-e-Zuhr · Dawat-e-taam to follow</p>
-        <p class="hijri" data-hijri="2026-12-31">22 Rajab 1448 AH (approx.)</p>
+        <span class="weekday" lang="ur">جمعرات<small>THURSDAY</small></span>
+        <h3 lang="ur">بارات و نکاح</h3>
+        <span class="en-h">Baraat &amp; Nikah</span>
+        <p class="ur-p" lang="ur">فہیم خان ہمراہ شاہیبہ</p>
+        <p class="ur-p" lang="ur">نکاح بعد نمازِ ظہر · بعدہٗ طعام</p>
+        <p class="en-p">Fahim Khan weds Shahiba · Nikah after Zuhr, then dinner</p>
+        <p class="hijri" lang="ur" data-hijri="2026-12-31">۲۲ رجب ۱۴۴۸ھ</p>
       </div>
       <div class="event">
         <div class="day"><b>1</b><span>JAN</span></div>
-        <span class="weekday">Friday · 2027</span>
-        <h3>Dawat-e-Walima</h3>
-        <span class="u" lang="ur">ولیمہ</span>
-        <p>For both couples</p>
-        <p>Ba’d namaz-e-Juma</p>
-        <p class="hijri" data-hijri="2027-01-01">23 Rajab 1448 AH (approx.)</p>
+        <span class="weekday" lang="ur">جمعہ<small>FRIDAY · 2027</small></span>
+        <h3 lang="ur">دعوتِ ولیمہ</h3>
+        <span class="en-h">Dawat-e-Walima</span>
+        <p class="ur-p" lang="ur">دونوں جوڑوں کی جانب سے</p>
+        <p class="ur-p" lang="ur">بعد نمازِ جمعہ</p>
+        <p class="en-p">For both couples · after Juma prayer</p>
+        <p class="hijri" lang="ur" data-hijri="2027-01-01">۲۳ رجب ۱۴۴۸ھ</p>
       </div>
     </div>
 
     <div class="venue">
-      <h2 class="foil">Maqaam · Address</h2>
+      <h2 class="sec"><span class="ur foil" lang="ur">مقام</span><span class="en">Address</span></h2>
       <address>Village Kaulachhapar, Post Madarapali<br>Bharath Rai, Deoria (U.P.) 274405</address>
-      <a class="btn" href="https://www.google.com/maps/search/?api=1&amp;query=Kaulachhapar+Deoria+Uttar+Pradesh+274405" target="_blank" rel="noopener">Open in Maps</a>
+      <a class="btn" href="https://www.google.com/maps/search/?api=1&amp;query=Kaulachhapar+Deoria+Uttar+Pradesh+274405" target="_blank" rel="noopener"><span class="ur" lang="ur">نقشے میں دیکھیں</span>Open in Maps</a>
     </div>
 
     <svg class="rule" viewBox="0 0 320 20" aria-hidden="true">
@@ -416,14 +488,15 @@ body.gate-up canvas.sky { z-index: 35; }
     </svg>
 
     <div class="host">
-      <span class="label">Mezbaan · Your host</span>
-      <div class="host-name">Mohd Abul Hasan Khan</div>
-      <div class="name-urdu" lang="ur">محمد ابو الحسن خان</div>
+      <span class="lbl"><span class="ur" lang="ur">میزبان</span><span class="en">Your host</span></span>
+      <div class="host-name foil" lang="ur">محمد ابو الحسن خان</div>
+      <div class="en">Mohd Abul Hasan Khan</div>
     </div>
 
     <div class="muntazir">
-      <span class="label">Muntazir · Awaiting you</span>
-      <p>Hasan&nbsp;Khan · Suhel&nbsp;Khan · Abdul&nbsp;Malik&nbsp;Khan · Saud&nbsp;Khan · Hammad&nbsp;Khan<br>&amp; tamaam ahl-e-khana</p>
+      <span class="lbl"><span class="ur" lang="ur">منتظرین</span><span class="en">Awaiting you</span></span>
+      <p class="ur" lang="ur">حسن&nbsp;خان · سہیل&nbsp;خان · عبدالمالک&nbsp;خان · سعود&nbsp;خان · حماد&nbsp;خان<br>و تمام اہلِ خانہ</p>
+      <p class="en">Hasan&nbsp;Khan · Suhel&nbsp;Khan · Abdul&nbsp;Malik&nbsp;Khan · Saud&nbsp;Khan · Hammad&nbsp;Khan &amp; family</p>
     </div>
 
   </div>
@@ -445,11 +518,11 @@ var FIRST_NIKAH = new Date("2026-12-30T13:00:00+05:30");
 
 (function hijri() {
   try {
-    var f = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Kolkata" });
+    var f = new Intl.DateTimeFormat("ur-PK-u-ca-islamic-umalqura-nu-arabext", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Kolkata" });
     document.querySelectorAll("[data-hijri]").forEach(function (el) {
       var p = {};
       f.formatToParts(new Date(el.getAttribute("data-hijri") + "T12:00:00+05:30")).forEach(function (x) { p[x.type] = x.value; });
-      if (p.day && p.month && p.year) el.textContent = p.day + " " + p.month + " " + p.year.replace(/\D/g, "") + " AH (approx.)";
+      if (p.day && p.month && p.year) el.textContent = p.day + " " + p.month + " " + p.year + "ھ";
     });
   } catch (e) { /* keep the printed dates */ }
 })();
@@ -457,7 +530,7 @@ var FIRST_NIKAH = new Date("2026-12-30T13:00:00+05:30");
 function tick() {
   var ms = FIRST_NIKAH - Date.now();
   if (ms <= 0) {
-    document.getElementById("countdown").innerHTML = '<div style="padding:10px 18px"><b>Mubarak ho!</b><span>Shaadi mubarak</span></div>';
+    document.getElementById("countdown").innerHTML = '<div style="padding:10px 18px"><b lang="ur" style="font-family:var(--f-callig);line-height:2.2">مبارک ہو</b><span>Shaadi Mubarak</span></div>';
     return;
   }
   var m = Math.floor(ms / 60000);
@@ -503,7 +576,7 @@ var sky = document.getElementById("sky"), skyCtx, twinkles = [], skyW = 0, skyH 
 function seedSky() {
   skyCtx = fitCanvas(sky);
   skyW = innerWidth; skyH = innerHeight;
-  var n = Math.round(innerWidth * innerHeight / 8000);
+  var n = Math.round(innerWidth * innerHeight / 6000);
   twinkles = [];
   function add(x, i) {
     twinkles.push({ x: x, y: Math.random() * innerHeight,
