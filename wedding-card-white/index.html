@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>شادی مبارک · Seraj Khan weds Nargish · Fahim Khan weds Shahiba</title>
-<meta name="description" content="Shaadi Mubarak! Nikah on 30 &amp; 31 December 2026, Walima on 1 January 2027 · Kaulachhapar, Deoria. Tap to open the card.">
+<title>دعوتِ ولیمہ · Walima of Seraj Khan &amp; Fahim Khan</title>
+<meta name="description" content="Dawat-e-Walima on Friday, 1 January 2027, after Juma prayer · Village Kaulachhapar, Deoria. Tap to open the card.">
 <meta name="theme-color" content="#fbf8f1">
 <meta name="robots" content="noindex, nofollow">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://suhel1239.github.io/TCM/wedding-card-white/">
-<meta property="og:title" content="شادی مبارک · Seraj Khan weds Nargish · Fahim Khan weds Shahiba">
-<meta property="og:description" content="Shaadi Mubarak! Nikah on 30 &amp; 31 December 2026, Walima on 1 January 2027 · Kaulachhapar, Deoria. Tap to open the card.">
+<meta property="og:title" content="دعوتِ ولیمہ · Walima of Seraj Khan &amp; Nargish · Fahim Khan &amp; Shahiba">
+<meta property="og:description" content="Dawat-e-Walima on Friday, 1 January 2027, after Juma prayer · Village Kaulachhapar, Deoria. Tap to open the card.">
 <meta property="og:image" content="https://suhel1239.github.io/TCM/wedding-card-white/preview.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -132,6 +132,8 @@ h2.sec .en { font-family: var(--f-caps); font-size: .7rem; letter-spacing: .26em
 .lbl .en { font-family: var(--f-caps); font-size: .62rem; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-soft); margin-top: 2px; }
 
 .events { width: 100%; display: grid; grid-template-columns: 1fr; gap: 16px; }
+.events.one .weekday { font-size: 1.15rem; unicode-bidi: isolate; }
+.events.one .weekday small { display: block; margin: -.2em 0 0; text-align: center; }
 .event { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 18px 18px; border: 1px solid var(--gold-light); background: linear-gradient(#fff, #fffcf4); min-width: 0; }
 .event .day { width: 64px; height: 64px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
   border: 1.5px solid var(--gold); box-shadow: 0 0 0 4px #fff, 0 0 0 5px var(--gold-light); margin-bottom: 8px; }
@@ -167,9 +169,7 @@ h2.sec .en { font-family: var(--f-caps); font-size: .7rem; letter-spacing: .26em
 .muntazir .en { font-size: .84rem; color: var(--ink-soft); }
 
 /* ---------- glitter canvases ---------- */
-canvas.sky { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40; pointer-events: none; }
-body.gate-up canvas.sky { z-index: 35; }
 
 /* ---------- opening: pearl envelope with a gold seal ---------- */
 .gate {
@@ -182,15 +182,10 @@ body.gate-up canvas.sky { z-index: 35; }
   transition: opacity .6s ease;
 }
 .gate.fade { opacity: 0; }
-/* slow-turning gold light rays and a warm glow behind the envelope */
-.rays { position: absolute; left: 50%; top: 50%; width: 170vmax; height: 170vmax; margin: -85vmax 0 0 -85vmax; pointer-events: none;
-  background: repeating-conic-gradient(from 0deg, rgba(222,184,96,.30) 0deg 5deg, rgba(222,184,96,0) 5deg 15deg);
-  -webkit-mask-image: radial-gradient(circle, #000 0%, rgba(0,0,0,.55) 22%, transparent 48%); mask-image: radial-gradient(circle, #000 0%, rgba(0,0,0,.55) 22%, transparent 48%);
-  animation: spin 60s linear infinite; will-change: transform; }
+/* a warm glow behind the envelope */
 .glow { position: absolute; left: 50%; top: 52%; width: min(120vw, 900px); height: min(120vw, 900px); transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none;
   background: radial-gradient(circle, rgba(255,236,180,.95) 0%, rgba(240,210,140,.45) 30%, rgba(240,210,140,0) 62%);
   animation: breathe 3.6s ease-in-out infinite; will-change: opacity; }
-@keyframes spin { to { transform: rotate(360deg); } }
 @keyframes breathe { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }
 .gate-title { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; margin-bottom: -18px; }
 .gate-title .ur { font-family: var(--f-callig); font-weight: 700; font-size: clamp(2.4rem, 11vw, 3.8rem); line-height: 2.1; direction: rtl; padding: .1em .4em .4em;
@@ -211,7 +206,7 @@ body.gate-up canvas.sky { z-index: 35; }
 @keyframes sweep { 0%, 45% { transform: translateX(0) skewX(-18deg); } 100% { transform: translateX(450%) skewX(-18deg); } }
 /* turning ring of gold dots around the seal */
 .seal-ring { position: absolute; left: 50%; top: 64%; z-index: 5; width: 208px; height: 208px; margin: -104px 0 0 -104px; border-radius: 50%; pointer-events: none;
-  border: 2px dotted var(--gold); animation: spin 18s linear infinite; will-change: transform; transition: opacity .3s; }
+  border: 2px dotted var(--gold); transition: opacity .3s; }
 .seal-ring::after { content: ""; position: absolute; inset: 8px; border-radius: 50%; border: 1px solid rgba(184,145,63,.45); }
 .gate.open .seal-ring, .gate.open .shine, .gate.open .gate-title { opacity: 0; transition: opacity .3s; }
 .gate-frame { position: absolute; inset: 14px; border: 1px solid var(--gold-light); outline: 1px solid var(--gold-light); outline-offset: 5px; pointer-events: none; }
@@ -282,6 +277,7 @@ body.gate-up canvas.sky { z-index: 35; }
   .couples > .lbl { grid-column: 1 / -1; justify-self: center; margin-bottom: 8px; }
   .pair-sep { height: 70%; align-self: center; margin: 0; }
   .events { grid-template-columns: repeat(3, 1fr); }
+  .events.one { grid-template-columns: minmax(0, 420px); justify-content: center; }
   .env { width: 560px; }
   .seal { width: 190px; height: 190px; margin: -95px 0 0 -95px; }
   .seal-ring { width: 236px; height: 236px; margin: -118px 0 0 -118px; }
@@ -306,25 +302,24 @@ body.gate-up canvas.sky { z-index: 35; }
   .replay-text { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .foil, .seal::after, .rays, .glow, .shine::before, .seal-ring, .gate-title .ur, .gate-hint { animation: none; }
+  .foil, .seal::after, .glow, .shine::before, .seal-ring, .gate-title .ur, .gate-hint { animation: none; }
 }
 </style>
 </head>
 <body>
 
 <div class="gate" id="gate" role="button" tabindex="0" aria-label="Open the invitation">
-  <div class="rays" aria-hidden="true"></div>
   <div class="glow" aria-hidden="true"></div>
   <div class="gate-frame" aria-hidden="true"></div>
   <svg class="gate-corner tl" viewBox="0 0 100 100" aria-hidden="true"><use href="#cornerArt"/></svg>
   <svg class="gate-corner tr" viewBox="0 0 100 100" aria-hidden="true"><use href="#cornerArt"/></svg>
   <svg class="gate-corner bl" viewBox="0 0 100 100" aria-hidden="true"><use href="#cornerArt"/></svg>
   <svg class="gate-corner br" viewBox="0 0 100 100" aria-hidden="true"><use href="#cornerArt"/></svg>
-  <div class="gate-title" aria-hidden="true"><span class="ur" lang="ur">دعوتِ نکاح</span><span class="en">You are invited</span></div>
+  <div class="gate-title" aria-hidden="true"><span class="ur" lang="ur">دعوتِ ولیمہ</span><span class="en">Walima Invitation</span></div>
   <div class="env" aria-hidden="true">
     <div class="env-back"></div>
     <div class="letter">
-      <span class="lk" lang="ur">شادی مبارک</span>
+      <span class="lk" lang="ur">دعوتِ ولیمہ</span>
       <span class="lt" lang="ur">سراج خان ہمراہ نرگس</span>
       <span class="lt" lang="ur">فہیم خان ہمراہ شاہیبہ</span>
     </div>
@@ -351,12 +346,11 @@ body.gate-up canvas.sky { z-index: 35; }
     <div class="seal">
       <span class="bism" lang="ar">بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</span>
       <span class="seal-line"></span>
-      <span class="ur" lang="ur">شادی مبارک</span>
+      <span class="ur" lang="ur">دعوتِ ولیمہ</span>
     </div>
   </div>
   <p class="gate-hint"><span class="ur" lang="ur">کھولنے کے لیے چھوئیں</span><span class="en">Tap to open</span></p>
 </div>
-<canvas class="sky" id="sky" aria-hidden="true"></canvas>
 <canvas class="burst" id="burst" aria-hidden="true"></canvas>
 <button class="replay" id="replay" type="button" aria-label="Phir se kholiye" hidden>↺<span class="replay-text"> Phir se kholiye</span></button>
 
@@ -407,12 +401,12 @@ body.gate-up canvas.sky { z-index: 35; }
     </svg>
 
     <div class="lead">
-      <p class="urdu" lang="ur">بصد احترام آپ کو اپنے نورِ نظر کی تقریباتِ نکاح میں شرکت کی دعوت دیتے ہیں۔ آپ کی تشریف آوری ہمارے لیے باعثِ مسرت ہوگی۔</p>
-      <p class="hindi" lang="hi">बसद एहतराम आपको अपने नूर-ए-नज़र की तक़रीबात-ए-निकाह में शिरकत की दावत देते हैं। आपकी तशरीफ़ आवरी हमारे लिए बाइस-ए-मसर्रत होगी।</p>
+      <p class="urdu" lang="ur">بصد احترام آپ کو اپنے نورِ نظر کی شادی خانہ آبادی کی خوشی میں منعقدہ دعوتِ ولیمہ میں شرکت کی دعوت دیتے ہیں۔ آپ کی تشریف آوری ہمارے لیے باعثِ مسرت ہوگی۔</p>
+      <p class="hindi" lang="hi">बसद एहतराम आपको अपने नूर-ए-नज़र की शादी ख़ाना आबादी की ख़ुशी में मुनअक़िद दावत-ए-वलीमा में शिरकत की दावत देते हैं। आपकी तशरीफ़ आवरी हमारे लिए बाइस-ए-मसर्रत होगी।</p>
     </div>
 
     <div class="couples">
-      <span class="lbl"><span class="ur" lang="ur">شادی خانہ آبادی · ان شاء اللہ</span><span class="en">Shaadi-e-Khana Aabadi · Insha’Allah</span></span>
+      <span class="lbl"><span class="ur" lang="ur">بتقریبِ شادی خانہ آبادی</span><span class="en">On the marriage of</span></span>
       <div class="pair">
         <h1 class="name foil" lang="ur">سراج خان</h1>
         <div class="name-en">Seraj Khan</div>
@@ -420,7 +414,7 @@ body.gate-up canvas.sky { z-index: 35; }
         <div class="weds"><span class="wd"><span lang="ur">ہمراہ</span><small>WEDS</small></span></div>
         <h1 class="name foil" lang="ur">نرگس</h1>
         <div class="name-en">Nargish</div>
-        <div class="date-tag"><span class="ur" lang="ur">بروز بدھ، ۳۰ دسمبر ۲۰۲۶ء</span><span class="en">Wednesday · 30 December 2026</span></div>
+        <div class="date-tag"><span class="ur" lang="ur">نکاح: ۳۰ دسمبر ۲۰۲۶ء</span><span class="en">Nikah · 30 December 2026</span></div>
       </div>
       <div class="pair-sep" aria-hidden="true"></div>
       <div class="pair">
@@ -430,7 +424,7 @@ body.gate-up canvas.sky { z-index: 35; }
         <div class="weds"><span class="wd"><span lang="ur">ہمراہ</span><small>WEDS</small></span></div>
         <h1 class="name foil" lang="ur">شاہیبہ</h1>
         <div class="name-en">Shahiba</div>
-        <div class="date-tag"><span class="ur" lang="ur">بروز جمعرات، ۳۱ دسمبر ۲۰۲۶ء</span><span class="en">Thursday · 31 December 2026</span></div>
+        <div class="date-tag"><span class="ur" lang="ur">نکاح: ۳۱ دسمبر ۲۰۲۶ء</span><span class="en">Nikah · 31 December 2026</span></div>
       </div>
     </div>
 
@@ -440,36 +434,13 @@ body.gate-up canvas.sky { z-index: 35; }
       <div><b id="cd-m">00</b><span lang="ur">منٹ<small>Minutes</small></span></div>
     </div>
 
-    <h2 class="sec"><span class="ur foil" lang="ur">تقریبات</span><span class="en">Programme</span></h2>
-    <div class="events">
-      <div class="event">
-        <div class="day"><b>30</b><span>DEC</span></div>
-        <span class="weekday" lang="ur">بدھ<small>WEDNESDAY</small></span>
-        <h3 lang="ur">بارات و نکاح</h3>
-        <span class="en-h">Baraat &amp; Nikah</span>
-        <p class="ur-p" lang="ur">سراج خان ہمراہ نرگس</p>
-        <p class="ur-p" lang="ur">نکاح بعد نمازِ ظہر · بعدہٗ طعام</p>
-        <p class="en-p">Seraj Khan weds Nargish · Nikah after Zuhr, then dinner</p>
-        <p class="hijri" lang="ur" data-hijri="2026-12-30">۲۱ رجب ۱۴۴۸ھ</p>
-      </div>
-      <div class="event">
-        <div class="day"><b>31</b><span>DEC</span></div>
-        <span class="weekday" lang="ur">جمعرات<small>THURSDAY</small></span>
-        <h3 lang="ur">بارات و نکاح</h3>
-        <span class="en-h">Baraat &amp; Nikah</span>
-        <p class="ur-p" lang="ur">فہیم خان ہمراہ شاہیبہ</p>
-        <p class="ur-p" lang="ur">نکاح بعد نمازِ ظہر · بعدہٗ طعام</p>
-        <p class="en-p">Fahim Khan weds Shahiba · Nikah after Zuhr, then dinner</p>
-        <p class="hijri" lang="ur" data-hijri="2026-12-31">۲۲ رجب ۱۴۴۸ھ</p>
-      </div>
+    <h2 class="sec"><span class="ur foil" lang="ur">دعوتِ ولیمہ</span><span class="en">Dawat-e-Walima</span></h2>
+    <div class="events one">
       <div class="event">
         <div class="day"><b>1</b><span>JAN</span></div>
-        <span class="weekday" lang="ur">جمعہ<small>FRIDAY · 2027</small></span>
-        <h3 lang="ur">دعوتِ ولیمہ</h3>
-        <span class="en-h">Dawat-e-Walima</span>
-        <p class="ur-p" lang="ur">دونوں جوڑوں کی جانب سے</p>
+        <span class="weekday" lang="ur">بروز جمعہ، یکم جنوری ۲۰۲۷ء<small>FRIDAY · 1 JANUARY 2027</small></span>
         <p class="ur-p" lang="ur">بعد نمازِ جمعہ</p>
-        <p class="en-p">For both couples · after Juma prayer</p>
+        <p class="en-p">After Juma prayer</p>
         <p class="hijri" lang="ur" data-hijri="2027-01-01">۲۳ رجب ۱۴۴۸ھ</p>
       </div>
     </div>
@@ -514,7 +485,7 @@ body.gate-up canvas.sky { z-index: 35; }
   d.appendChild(art); defs.appendChild(d); document.body.appendChild(defs);
 })();
 
-var FIRST_NIKAH = new Date("2026-12-30T13:00:00+05:30");
+var WALIMA_AT = new Date("2027-01-01T13:30:00+05:30");
 
 (function hijri() {
   try {
@@ -528,9 +499,9 @@ var FIRST_NIKAH = new Date("2026-12-30T13:00:00+05:30");
 })();
 
 function tick() {
-  var ms = FIRST_NIKAH - Date.now();
+  var ms = WALIMA_AT - Date.now();
   if (ms <= 0) {
-    document.getElementById("countdown").innerHTML = '<div style="padding:10px 18px"><b lang="ur" style="font-family:var(--f-callig);line-height:2.2">مبارک ہو</b><span>Shaadi Mubarak</span></div>';
+    document.getElementById("countdown").innerHTML = '<div style="padding:10px 18px"><b lang="ur" style="font-family:var(--f-callig);line-height:2.2">ولیمہ مبارک</b><span>Walima Mubarak</span></div>';
     return;
   }
   var m = Math.floor(ms / 60000);
@@ -572,50 +543,15 @@ function drawStar(ctx, sprite, x, y, r, a) {
   ctx.drawImage(sprite, x - s / 2, y - s / 2, s, s);
 }
 
-var sky = document.getElementById("sky"), skyCtx, twinkles = [], skyW = 0, skyH = 0;
-function seedSky() {
-  skyCtx = fitCanvas(sky);
-  skyW = innerWidth; skyH = innerHeight;
-  var n = Math.round(innerWidth * innerHeight / 6000);
-  twinkles = [];
-  function add(x, i) {
-    twinkles.push({ x: x, y: Math.random() * innerHeight,
-      r: 2.5 + Math.random() * 5, ph: Math.random() * 6.28, sp: .6 + Math.random() * 1.6,
-      img: SPRITES[i % SPRITES.length], dy: 4 + Math.random() * 12 });
-  }
-  for (var i = 0; i < n; i++) add(Math.random() * innerWidth, i);
-  var card = document.querySelector(".card").getBoundingClientRect();
-  var side = Math.max(0, card.left - 16);
-  var extra = Math.round(side * innerHeight / 2600);
-  for (var j = 0; j < extra; j++) add(j % 2 ? Math.random() * side : innerWidth - Math.random() * side, j);
-}
-function drawSky(t, dt) {
-  skyCtx.clearRect(0, 0, skyW, skyH);
-  for (var i = 0; i < twinkles.length; i++) {
-    var p = twinkles[i];
-    var a = reduceMotion ? .7 : Math.max(0, Math.sin(t / 1000 * p.sp + p.ph));
-    if (!reduceMotion) { p.y -= p.dy * dt; if (p.y < -10) p.y = skyH + 10; }
-    drawStar(skyCtx, p.img, p.x, p.y, p.r * (.5 + a * .5), a);
-  }
-  skyCtx.globalAlpha = 1;
-}
-seedSky();
 
 var burstC = document.getElementById("burst"), burstCtx = fitCanvas(burstC), flakes = [];
 
-/* phones fire "resize" when the address bar slides; only re-scatter on a real width change */
+/* keep the glitter canvas the size of the screen */
 var resizeTimer;
 addEventListener("resize", function () {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(function () {
-    if (Math.abs(innerWidth - skyW) > 40) seedSky();
-    else if (innerHeight !== skyH) {
-      var k = innerHeight / skyH;
-      twinkles.forEach(function (p) { p.y *= k; });
-      skyCtx = fitCanvas(sky); skyW = innerWidth; skyH = innerHeight;
-    }
     burstCtx = fitCanvas(burstC);
-    if (reduceMotion) drawSky(0, 0);
   }, 150);
 });
 
@@ -648,41 +584,39 @@ function drawBurst(dt) {
   if (!flakes.length) burstCtx.clearRect(0, 0, innerWidth, innerHeight);
 }
 
-var last = 0;
+/* the glitter only animates while the burst is falling */
+var last = 0, running = false;
 function loop(t) {
   var dt = last ? Math.min((t - last) / 1000, .05) : 0;
   last = t;
-  if (!document.hidden) { drawSky(t, dt); if (flakes.length) drawBurst(dt); }
-  requestAnimationFrame(loop);
+  drawBurst(dt);
+  if (flakes.length) requestAnimationFrame(loop); else { running = false; last = 0; }
 }
-if (reduceMotion) drawSky(0, 0); else requestAnimationFrame(loop);
+function startBurst() { burst(); if (!running) { running = true; requestAnimationFrame(loop); } }
 
 /* ---------- opening: only when the guest taps ---------- */
 var gate = document.getElementById("gate"), replay = document.getElementById("replay"), opened = false;
 function openGate() {
   if (opened) return;
   opened = true;
-  if (reduceMotion) { gate.hidden = true; replay.hidden = false; document.body.classList.remove("gate-up"); return; }
+  if (reduceMotion) { gate.hidden = true; replay.hidden = false; return; }
   gate.classList.add("open");
-  setTimeout(burst, 450);
+  setTimeout(startBurst, 450);
   setTimeout(function () { gate.classList.add("fade"); }, 1500);
   setTimeout(function () {
     gate.hidden = true; replay.hidden = false;
-    document.body.classList.remove("gate-up");
-  }, 2150);
+    }, 2150);
 }
 function showGate() {
   opened = false;
   gate.classList.remove("open", "fade");
   gate.hidden = false; replay.hidden = true;
-  document.body.classList.add("gate-up");
   scrollTo(0, 0);
   gate.focus({ preventScroll: true });
 }
 gate.addEventListener("click", openGate);
 gate.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openGate(); } });
 replay.addEventListener("click", showGate);
-document.body.classList.add("gate-up");
 </script>
 </body>
 </html>
