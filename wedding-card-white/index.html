@@ -58,9 +58,15 @@ body {
 
 /* ---------- card ---------- */
 .card {
-  position: relative; z-index: 1;
+  position: relative; z-index: 1; overflow: hidden;
   max-width: 680px; margin: 0 auto;
-  background: var(--paper);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(240,214,150,.35), transparent 45%),
+    radial-gradient(ellipse at 50% 100%, rgba(240,214,150,.30), transparent 45%),
+    radial-gradient(ellipse at 0% 50%, rgba(240,214,150,.18), transparent 35%),
+    radial-gradient(ellipse at 100% 50%, rgba(240,214,150,.18), transparent 35%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23b8913f' stroke-opacity='.13' stroke-width='1'%3E%3Crect x='17' y='17' width='22' height='22'/%3E%3Crect x='17' y='17' width='22' height='22' transform='rotate(45 28 28)'/%3E%3Cpath d='M0 28H6M50 28H56M28 0V6M28 50V56'/%3E%3C/g%3E%3Ccircle cx='28' cy='28' r='2' fill='%23b8913f' fill-opacity='.18'/%3E%3C/svg%3E"),
+    linear-gradient(#fffdf8, #fffaf0);
   padding: 72px 44px 56px;
   border: 1px solid var(--gold-light);
   box-shadow: 0 1px 0 #fff inset, 0 24px 60px -28px rgba(138,100,32,.45), 0 0 0 10px var(--paper), 0 0 0 11px var(--gold-light);
@@ -69,6 +75,15 @@ body {
   content: ""; position: absolute; inset: 14px; pointer-events: none;
   border: 1.5px solid var(--gold); outline: 1px solid var(--gold-light); outline-offset: 5px;
 }
+.band { position: absolute; inset: 28px; padding: 10px; pointer-events: none; z-index: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cg fill='%23c9a14a'%3E%3Cpath d='M10 3Q12.4 7.6 10 10Q7.6 7.6 10 3ZM10 17Q7.6 12.4 10 10Q12.4 12.4 10 17ZM3 10Q7.6 7.6 10 10Q7.6 12.4 3 10ZM17 10Q12.4 12.4 10 10Q12.4 7.6 17 10Z'/%3E%3C/g%3E%3Ccircle cx='10' cy='10' r='1.4' fill='%23fffaf0'/%3E%3Ccircle cx='0' cy='0' r='1.2' fill='%23c9a14a'/%3E%3Ccircle cx='20' cy='0' r='1.2' fill='%23c9a14a'/%3E%3Ccircle cx='0' cy='20' r='1.2' fill='%23c9a14a'/%3E%3Ccircle cx='20' cy='20' r='1.2' fill='%23c9a14a'/%3E%3C/svg%3E") 0 0 / 20px 20px repeat;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); opacity: .75; }
+.band::after { content: ""; position: absolute; inset: 0; border: 1px solid var(--gold-light); }
+/* faint gold mandala watermarks behind the couples and the host */
+.mandala { position: absolute; left: 50%; top: 50%; width: min(560px, 120%); aspect-ratio: 1; transform: translate(-50%, -50%); opacity: .13; pointer-events: none; z-index: -1; }
+.couples, .host-wrap { position: relative; isolation: isolate; }
+.host-wrap { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 30px; }
 .corner { position: absolute; width: 92px; height: 92px; pointer-events: none; z-index: 2; }
 .corner.tl { top: 4px; left: 4px; }
 .corner.tr { top: 4px; right: 4px; transform: scaleX(-1); }
@@ -117,7 +132,7 @@ body {
 .date-tag .en { font-family: var(--f-caps); font-size: .72rem; letter-spacing: .12em; color: var(--ink-soft); }
 .pair-sep { width: 1px; height: 36px; background: linear-gradient(var(--gold-light), var(--gold), var(--gold-light)); margin-block: 12px; }
 
-.countdown { display: flex; gap: 0; justify-content: center; border: 1px solid var(--gold-light); }
+.countdown { display: flex; gap: 0; justify-content: center; border: 1px solid var(--gold-light); background: linear-gradient(#fffaf0, #fff3dc); box-shadow: 0 0 0 4px #fffdf8, 0 0 0 5px var(--gold-light); }
 .countdown div { min-width: 82px; padding: 10px 8px; display: flex; flex-direction: column; }
 .countdown div + div { border-left: 1px solid var(--gold-light); }
 .countdown b { font-family: var(--f-caps); font-weight: 400; font-size: 1.7rem; color: var(--gold-deep); font-variant-numeric: tabular-nums; line-height: 1.2; }
@@ -135,7 +150,7 @@ h2.sec .en { font-family: var(--f-caps); font-size: .7rem; letter-spacing: .26em
 .event.walima { border-color: var(--gold); box-shadow: 0 0 0 4px #fff, 0 0 0 5px var(--gold-light), 0 12px 30px -16px rgba(184,145,63,.6); background: linear-gradient(#fffdf6, #fff6e2); }
 .event.walima h3 { font-size: 1.6rem; }
 .event .tag { font-family: var(--f-callig); font-size: .8rem; line-height: 1.9; color: #fff; background: var(--gold); padding: 0 12px 4px; border-radius: 999px; margin-bottom: 4px; }
-.event { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 18px 18px; border: 1px solid var(--gold-light); background: linear-gradient(#fff, #fffcf4); min-width: 0; }
+.event { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 18px 18px; border: 1px solid var(--gold-light); background: radial-gradient(ellipse at 50% 0%, rgba(240,214,150,.35), transparent 60%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23b8913f' stroke-opacity='.13' stroke-width='1'%3E%3Crect x='17' y='17' width='22' height='22'/%3E%3Crect x='17' y='17' width='22' height='22' transform='rotate(45 28 28)'/%3E%3Cpath d='M0 28H6M50 28H56M28 0V6M28 50V56'/%3E%3C/g%3E%3Ccircle cx='28' cy='28' r='2' fill='%23b8913f' fill-opacity='.18'/%3E%3C/svg%3E"), linear-gradient(#fffdf8, #fff7e8); border-radius: 120px 120px 6px 6px / 60px 60px 6px 6px; padding-top: 30px; min-width: 0; }
 .event .day { width: 64px; height: 64px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
   border: 1.5px solid var(--gold); box-shadow: 0 0 0 4px #fff, 0 0 0 5px var(--gold-light); margin-bottom: 8px; }
 .event .day b { font-family: var(--f-caps); font-weight: 500; font-size: 1.4rem; line-height: 1; color: var(--gold-deep); }
@@ -299,6 +314,8 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
   body { font-size: 17px; padding-block: 24px 48px; }
   .card { padding: 60px 22px 44px; box-shadow: 0 24px 60px -28px rgba(138,100,32,.45), 0 0 0 6px var(--paper), 0 0 0 7px var(--gold-light); }
   .card::before { inset: 10px; }
+  .band { inset: 20px; padding: 7px; background-size: 14px 14px; }
+  .mandala { width: 130%; }
   .corner { width: 70px; height: 70px; }
   .bismillah { font-size: 1.8rem; }
   .seal { width: 150px; height: 150px; margin: -75px 0 0 -75px; }
@@ -406,6 +423,7 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
 <button class="replay" id="replay" type="button" aria-label="Phir se kholiye" hidden>↺<span class="replay-text"> Phir se kholiye</span></button>
 
 <main class="card">
+  <div class="band" aria-hidden="true"></div>
   <svg class="corner tl" viewBox="0 0 100 100" aria-hidden="true">
     <g fill="none" stroke="#b8913f" stroke-width="1.4" stroke-linecap="round">
       <path d="M8 92 V24 Q8 8 24 8 H92"/>
@@ -457,6 +475,7 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
     </div>
 
     <div class="couples">
+      <svg class="mandala" viewBox="-100 -100 200 200" aria-hidden="true"><g fill="none" stroke="#b8913f" stroke-width=".7"><circle r="14"/><circle r="30"/><circle r="52"/><circle r="74"/><circle r="96"/><path transform="rotate(0.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(22.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(45.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(67.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(90.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(112.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(135.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(157.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(180.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(202.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(225.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(247.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(270.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(292.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(315.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(337.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(22.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><path transform="rotate(67.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><path transform="rotate(112.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><path transform="rotate(157.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><path transform="rotate(202.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><path transform="rotate(247.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><path transform="rotate(292.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><path transform="rotate(337.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><circle cx="0.0" cy="-84.0" r="1.6" fill="#b8913f"/><circle cx="16.39" cy="-82.39" r="1.6" fill="#b8913f"/><circle cx="32.15" cy="-77.61" r="1.6" fill="#b8913f"/><circle cx="46.67" cy="-69.84" r="1.6" fill="#b8913f"/><circle cx="59.4" cy="-59.4" r="1.6" fill="#b8913f"/><circle cx="69.84" cy="-46.67" r="1.6" fill="#b8913f"/><circle cx="77.61" cy="-32.15" r="1.6" fill="#b8913f"/><circle cx="82.39" cy="-16.39" r="1.6" fill="#b8913f"/><circle cx="84.0" cy="-0.0" r="1.6" fill="#b8913f"/><circle cx="82.39" cy="16.39" r="1.6" fill="#b8913f"/><circle cx="77.61" cy="32.15" r="1.6" fill="#b8913f"/><circle cx="69.84" cy="46.67" r="1.6" fill="#b8913f"/><circle cx="59.4" cy="59.4" r="1.6" fill="#b8913f"/><circle cx="46.67" cy="69.84" r="1.6" fill="#b8913f"/><circle cx="32.15" cy="77.61" r="1.6" fill="#b8913f"/><circle cx="16.39" cy="82.39" r="1.6" fill="#b8913f"/><circle cx="0.0" cy="84.0" r="1.6" fill="#b8913f"/><circle cx="-16.39" cy="82.39" r="1.6" fill="#b8913f"/><circle cx="-32.15" cy="77.61" r="1.6" fill="#b8913f"/><circle cx="-46.67" cy="69.84" r="1.6" fill="#b8913f"/><circle cx="-59.4" cy="59.4" r="1.6" fill="#b8913f"/><circle cx="-69.84" cy="46.67" r="1.6" fill="#b8913f"/><circle cx="-77.61" cy="32.15" r="1.6" fill="#b8913f"/><circle cx="-82.39" cy="16.39" r="1.6" fill="#b8913f"/><circle cx="-84.0" cy="0.0" r="1.6" fill="#b8913f"/><circle cx="-82.39" cy="-16.39" r="1.6" fill="#b8913f"/><circle cx="-77.61" cy="-32.15" r="1.6" fill="#b8913f"/><circle cx="-69.84" cy="-46.67" r="1.6" fill="#b8913f"/><circle cx="-59.4" cy="-59.4" r="1.6" fill="#b8913f"/><circle cx="-46.67" cy="-69.84" r="1.6" fill="#b8913f"/><circle cx="-32.15" cy="-77.61" r="1.6" fill="#b8913f"/><circle cx="-16.39" cy="-82.39" r="1.6" fill="#b8913f"/></g></svg>
       <span class="lbl"><span class="ur" lang="ur">بتقریبِ شادی خانہ آبادی</span><span class="en">On the marriage of</span></span>
       <div class="pair">
         <h1 class="name foil" lang="ur">سراج خان</h1>
@@ -533,6 +552,8 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
       <circle cx="140" cy="10" r="2" fill="#b8913f"/><circle cx="180" cy="10" r="2" fill="#b8913f"/>
     </svg>
 
+    <div class="host-wrap">
+    <svg class="mandala" viewBox="-100 -100 200 200" aria-hidden="true"><g fill="none" stroke="#b8913f" stroke-width=".7"><circle r="14"/><circle r="30"/><circle r="52"/><circle r="74"/><circle r="96"/><path transform="rotate(0.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(22.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(45.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(67.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(90.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(112.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(135.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(157.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(180.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(202.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(225.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(247.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(270.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(292.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(315.0)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(337.5)" d="M0 -52 Q13 -64 0 -92 Q-13 -64 0 -52Z" fill="#e8d39a" fill-opacity=".45"/><path transform="rotate(22.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><path transform="rotate(67.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><path transform="rotate(112.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><path transform="rotate(157.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><path transform="rotate(202.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><path transform="rotate(247.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><path transform="rotate(292.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><path transform="rotate(337.5)" d="M0 -14 Q9 -22 0 -50 Q-9 -22 0 -14Z" fill="#e8d39a" fill-opacity=".6"/><circle cx="0.0" cy="-84.0" r="1.6" fill="#b8913f"/><circle cx="16.39" cy="-82.39" r="1.6" fill="#b8913f"/><circle cx="32.15" cy="-77.61" r="1.6" fill="#b8913f"/><circle cx="46.67" cy="-69.84" r="1.6" fill="#b8913f"/><circle cx="59.4" cy="-59.4" r="1.6" fill="#b8913f"/><circle cx="69.84" cy="-46.67" r="1.6" fill="#b8913f"/><circle cx="77.61" cy="-32.15" r="1.6" fill="#b8913f"/><circle cx="82.39" cy="-16.39" r="1.6" fill="#b8913f"/><circle cx="84.0" cy="-0.0" r="1.6" fill="#b8913f"/><circle cx="82.39" cy="16.39" r="1.6" fill="#b8913f"/><circle cx="77.61" cy="32.15" r="1.6" fill="#b8913f"/><circle cx="69.84" cy="46.67" r="1.6" fill="#b8913f"/><circle cx="59.4" cy="59.4" r="1.6" fill="#b8913f"/><circle cx="46.67" cy="69.84" r="1.6" fill="#b8913f"/><circle cx="32.15" cy="77.61" r="1.6" fill="#b8913f"/><circle cx="16.39" cy="82.39" r="1.6" fill="#b8913f"/><circle cx="0.0" cy="84.0" r="1.6" fill="#b8913f"/><circle cx="-16.39" cy="82.39" r="1.6" fill="#b8913f"/><circle cx="-32.15" cy="77.61" r="1.6" fill="#b8913f"/><circle cx="-46.67" cy="69.84" r="1.6" fill="#b8913f"/><circle cx="-59.4" cy="59.4" r="1.6" fill="#b8913f"/><circle cx="-69.84" cy="46.67" r="1.6" fill="#b8913f"/><circle cx="-77.61" cy="32.15" r="1.6" fill="#b8913f"/><circle cx="-82.39" cy="16.39" r="1.6" fill="#b8913f"/><circle cx="-84.0" cy="0.0" r="1.6" fill="#b8913f"/><circle cx="-82.39" cy="-16.39" r="1.6" fill="#b8913f"/><circle cx="-77.61" cy="-32.15" r="1.6" fill="#b8913f"/><circle cx="-69.84" cy="-46.67" r="1.6" fill="#b8913f"/><circle cx="-59.4" cy="-59.4" r="1.6" fill="#b8913f"/><circle cx="-46.67" cy="-69.84" r="1.6" fill="#b8913f"/><circle cx="-32.15" cy="-77.61" r="1.6" fill="#b8913f"/><circle cx="-16.39" cy="-82.39" r="1.6" fill="#b8913f"/></g></svg>
     <div class="host">
       <span class="lbl"><span class="ur" lang="ur">میزبان</span><span class="en">Your host</span></span>
       <div class="host-name foil" lang="ur">محمد ابو الحسن خان</div>
@@ -543,6 +564,7 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
       <span class="lbl"><span class="ur" lang="ur">منتظرین</span><span class="en">Awaiting you</span></span>
       <p class="ur" lang="ur">حسن&nbsp;خان · سہیل&nbsp;خان · عبدالمالک&nbsp;خان · سعود&nbsp;خان · حماد&nbsp;خان<br>و تمام اہلِ خانہ</p>
       <p class="en">Hasan&nbsp;Khan · Suhel&nbsp;Khan · Abdul&nbsp;Malik&nbsp;Khan · Saud&nbsp;Khan · Hammad&nbsp;Khan &amp; family</p>
+    </div>
     </div>
 
   </div>
