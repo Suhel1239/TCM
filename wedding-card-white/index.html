@@ -323,6 +323,19 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
   .seal .ur { font-size: 1.3rem; }
   .replay { padding: 8px 12px; font-size: 1rem; letter-spacing: 0; }
   .replay-text { display: none; }
+  /* smaller envelope and seal on phones */
+  .env { width: 72vw; }
+  .seal { width: 118px; height: 118px; margin: -59px 0 0 -59px; }
+  .seal-ring { width: 146px; height: 146px; margin: -73px 0 0 -73px; }
+  .seal::before { inset: 7px; }
+  .seal .seal-line { width: 56px; margin-block: 5px 2px; }
+  .seal .ur { font-size: 1.05rem; line-height: 1.6; }
+  .gate-title .ur { font-size: 2.2rem; }
+  .gate { gap: 24px; }
+  /* smaller invitation lines and ayah on phones */
+  .urdu { font-size: .95rem; line-height: 2; }
+  .hindi { font-size: .82rem; }
+  .verse .ar { font-size: 1.6rem; }
 }
 /* minarets standing on both sides of the opening screen */
 .minarets { position: absolute; bottom: 16px; display: flex; align-items: flex-end; gap: 6px; pointer-events: none; z-index: 1;
