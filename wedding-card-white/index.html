@@ -109,7 +109,8 @@ body {
 
 .rule { width: 100%; max-width: 320px; height: 20px; display: block; }
 
-.lead { display: flex; flex-direction: column; gap: 8px; max-width: 32em; }
+.lead { display: flex; flex-direction: column; gap: 8px; width: min(360px, 82%); }
+.lead p { text-wrap: balance; }
 .lead p { margin: 0; }
 .urdu { font-family: var(--f-urdu); font-size: 1.1rem; line-height: 2; direction: rtl; color: var(--ink); }
 .hindi { font-family: var(--f-hindi); font-size: .92rem; color: var(--ink-soft); }
