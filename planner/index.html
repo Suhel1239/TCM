@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Khan Shaadi Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Mukta:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a family ledger book. Header with the three dates, a row of money totals, then two tabs (To-do and Paisa) that each hold an add form and a live list. */
+:root {
+  --bg: #f7f3ee;            /* soft ivory page */
+  --surface: #ffffff;
+  --sunk: #f1ebe3;
+  --line: #e4d9cb;
+  --ink: #2b1d1a;
+  --ink-soft: #6f5d55;
+  --maroon: #7a1730;        /* accent, from the wedding card */
+  --maroon-soft: #f4e3e6;
+  --gold: #a87e2c;
+  --in: #1d7a4c;            /* money received */
+  --in-soft: #e3f3ea;
+  --out: #b3261e;           /* money spent */
+  --out-soft: #fbe7e5;
+  --f-display: "Marcellus", Georgia, serif;
+  --f-body: "Mukta", "Noto Sans Devanagari", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1a1214; --surface: #241a1d; --sunk: #2d2225; --line: #3d2f33;
+    --ink: #f3e9e4; --ink-soft: #b9a8a2; --maroon: #e48ea3; --maroon-soft: #3a2228;
+    --gold: #d9b45e; --in: #5fcf94; --in-soft: #1d3328; --out: #f08a80; --out-soft: #3a2220;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1a1214; --surface: #241a1d; --sunk: #2d2225; --line: #3d2f33;
+  --ink: #f3e9e4; --ink-soft: #b9a8a2; --maroon: #e48ea3; --maroon-soft: #3a2228;
+  --gold: #d9b45e; --in: #5fcf94; --in-soft: #1d3328; --out: #f08a80; --out-soft: #3a2220;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.5; padding-inline: 16px; padding-block: 20px 64px; }
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--maroon); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* header */
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 2px solid var(--gold); }
+h1 { margin: 0; font-family: var(--f-display); font-weight: 400; font-size: clamp(1.6rem, 5vw, 2.2rem); line-height: 1.1; color: var(--maroon); text-wrap: balance; }
+.sub { margin: 4px 0 0; color: var(--ink-soft); font-size: .95rem; }
+.who { display: flex; align-items: center; gap: 8px; font-size: .85rem; color: var(--ink-soft); }
+.who img { width: 26px; height: 26px; border-radius: 50%; }
+.pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .78rem; font-weight: 600; background: var(--sunk); color: var(--ink-soft); }
+.pill.ro { background: var(--maroon-soft); color: var(--maroon); }
+
+/* totals */
+.totals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.tile .k { font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
+.tile .v { font-size: 1.45rem; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.tile .h { font-size: .8rem; color: var(--ink-soft); }
+.tile.in .v { color: var(--in); }
+.tile.out .v { color: var(--out); }
+.tile.bal .v.neg { color: var(--out); }
+.budget-edit { display: flex; gap: 6px; margin-top: 4px; }
+.budget-edit input { width: 100%; min-width: 0; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--maroon); font-size: .8rem; font-weight: 600; text-decoration: underline; }
+.meter { height: 8px; border-radius: 99px; background: var(--sunk); overflow: hidden; margin-top: 6px; }
+.meter i { display: block; height: 100%; background: var(--gold); border-radius: 99px; }
+.meter i.over { background: var(--out); }
+
+/* tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tab { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 14px; font-weight: 600; color: var(--ink-soft); margin-bottom: -1px; }
+.tab[aria-selected="true"] { color: var(--maroon); border-bottom-color: var(--maroon); }
+.tab .count { font-weight: 500; font-size: .85rem; color: var(--ink-soft); margin-left: 4px; }
+
+.panel { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+h2 { margin: 0 0 10px; font-family: var(--f-display); font-weight: 400; font-size: 1.25rem; color: var(--ink); }
+h3 { margin: 0 0 8px; font-size: .82rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+
+/* forms */
+form { display: flex; flex-direction: column; gap: 10px; }
+label { display: flex; flex-direction: column; gap: 3px; font-size: .82rem; font-weight: 600; color: var(--ink-soft); min-width: 0; }
+input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-weight: 400; font-size: .98rem; min-width: 0; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; padding: 8px; background: var(--bg); font-weight: 600; color: var(--ink-soft); }
+.seg button[aria-pressed="true"].in { background: var(--in-soft); color: var(--in); }
+.seg button[aria-pressed="true"].out { background: var(--out-soft); color: var(--out); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--maroon); background: var(--maroon); color: var(--surface); padding: 8px 16px; border-radius: 8px; font-weight: 600; }
+.btn.ghost { background: transparent; color: var(--maroon); }
+.btn:disabled { opacity: .5; cursor: default; }
+.msg { font-size: .85rem; color: var(--out); min-height: 1.2em; margin: 0; }
+
+/* filters */
+.filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 12px; font-size: .85rem; color: var(--ink-soft); }
+.chip[aria-pressed="true"] { background: var(--maroon); border-color: var(--maroon); color: var(--surface); }
+.progress { display: flex; align-items: center; gap: 10px; font-size: .88rem; color: var(--ink-soft); margin-bottom: 12px; }
+.progress .meter { flex: 1; margin: 0; }
+.progress .meter i { background: var(--in); }
+
+/* lists */
+ul.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--line); }
+.item:first-child { border-top: 0; }
+.check { width: 22px; height: 22px; margin-top: 2px; accent-color: var(--in); }
+.item .t { font-weight: 600; overflow-wrap: anywhere; }
+.item.done .t { text-decoration: line-through; color: var(--ink-soft); }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: .8rem; color: var(--ink-soft); margin-top: 2px; }
+.tag { background: var(--sunk); border-radius: 4px; padding: 0 6px; }
+.tag.ev { background: var(--maroon-soft); color: var(--maroon); }
+.due.late { color: var(--out); font-weight: 600; }
+.ops { display: flex; gap: 4px; }
+.op { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 2px 8px; font-size: .8rem; color: var(--ink-soft); }
+.op.danger { border-color: var(--out); color: var(--out); }
+.amt { font-weight: 700; white-space: nowrap; text-align: right; }
+.amt.in { color: var(--in); }
+.amt.out { color: var(--out); }
+.ltype { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; margin-top: 1px; }
+.ltype.in { background: var(--in-soft); color: var(--in); }
+.ltype.out { background: var(--out-soft); color: var(--out); }
+.ledger-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.empty { padding: 18px 4px; color: var(--ink-soft); text-align: center; }
+.empty b { color: var(--ink); }
+
+/* breakdown */
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; font-size: .88rem; }
+.bar .meter { grid-column: 1 / -1; margin: 0; }
+.bar .meter i { background: var(--out); opacity: .8; }
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+
+.logrow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); font-size: .92rem; }
+.logrow:first-child { border-top: 0; }
+.logrow img { width: 26px; height: 26px; border-radius: 50%; }
+.logrow .when { font-size: .78rem; color: var(--ink-soft); white-space: nowrap; }
+.verb { font-weight: 600; }
+.verb.deleted { color: var(--out); }
+.verb.added { color: var(--in); }
+.banner { background: var(--maroon-soft); color: var(--maroon); border-radius: 8px; padding: 10px 14px; font-size: .92rem; }
+
+@media (max-width: 820px) {
+  .totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .panel { grid-template-columns: minmax(0, 1fr); }
+  .split { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) {
+  .row2 { grid-template-columns: 1fr; }
+  .tile .v { font-size: 1.2rem; }
+}
+
+/* login screen */
+.login { min-height: 80vh; display: grid; place-items: center; }
+.login-card { width: min(380px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 24px 20px; display: flex; flex-direction: column; gap: 6px; }
+.login-card h1 { font-size: 1.8rem; }
+.btn.small { padding: 3px 10px; font-size: .8rem; border-radius: 6px; }
+label.btn { display: inline-flex; align-items: center; color: var(--maroon); font-size: .8rem; font-weight: 600; flex-direction: row; cursor: pointer; }
+.who { flex-wrap: wrap; justify-content: flex-end; }
+</style>
+<script src="firebase-config.js"></script>
+</head>
+<body>
+<section class="login" id="login">
+  <div class="login-card">
+    <h1>Khan Shaadi Planner</h1>
+    <p class="sub">Private planner. Sign in to continue.</p>
+    <form id="login-form">
+      <label for="login-email">Email
+        <input id="login-email" type="email" autocomplete="username" required>
+      </label>
+      <label for="login-pass">Password
+        <input id="login-pass" type="password" autocomplete="current-password" required minlength="6">
+      </label>
+      <p class="msg" id="login-msg"></p>
+      <button class="btn" type="submit" id="login-btn">Sign in</button>
+    </form>
+  </div>
+</section>
+
+<div class="wrap" id="app" hidden>
+  <header>
+    <div>
+      <h1>Khan Shaadi Planner</h1>
+      <p class="sub">Seraj Khan &amp; Nargish · 30 Dec &nbsp;|&nbsp; Fahim Khan &amp; Shahiba · 31 Dec &nbsp;|&nbsp; Walima · 1 Jan</p>
+    </div>
+    <div class="who" id="who"><span id="who-email"></span><span class="pill" id="status">Connecting…</span><button class="btn ghost small" type="button" id="backup-btn">Backup</button><label class="btn ghost small" for="restore-file">Restore</label><input type="file" id="restore-file" accept="application/json,.json" hidden><button class="btn ghost small" type="button" id="logout-btn">Sign out</button></div>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="totals" aria-label="Money summary">
+    <div class="tile">
+      <div class="k">Total budget</div>
+      <div class="v num" id="t-budget">—</div>
+      <div class="h" id="t-budget-h">Add money needed to tasks</div>
+      <div class="meter" aria-hidden="true"><i id="t-budget-bar" style="width:0%"></i></div>
+      <div class="h" id="t-budget-left"></div>
+    </div>
+    <div class="tile in"><div class="k">Received</div><div class="v num" id="t-in">₹0</div><div class="h" id="t-in-h">0 entries</div></div>
+    <div class="tile out"><div class="k">Spent</div><div class="v num" id="t-out">₹0</div><div class="h" id="t-out-h">0 entries</div></div>
+    <div class="tile bal"><div class="k">Cash in hand</div><div class="v num" id="t-bal">₹0</div><div class="h">Received minus spent</div></div>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-todo" aria-controls="p-todo" aria-selected="true" type="button">To-do <span class="count" id="c-todo"></span></button>
+    <button class="tab" role="tab" id="tab-money" aria-controls="p-money" aria-selected="false" type="button">Paisa · Budget <span class="count" id="c-money"></span></button>
+    <button class="tab" role="tab" id="tab-log" aria-controls="p-log" aria-selected="false" type="button">Activity</button>
+  </div>
+
+  <!-- TO-DO -->
+  <section class="panel" id="p-todo" role="tabpanel" aria-labelledby="tab-todo">
+    <div class="box editor-only">
+      <h2 id="task-form-title">Add a task</h2>
+      <form id="task-form">
+        <label for="task-title">Task
+          <input id="task-title" required maxlength="140" placeholder="e.g. Book tent and lights">
+        </label>
+        <div class="row2">
+          <label for="task-event">For
+            <select id="task-event"></select>
+          </label>
+          <label for="task-cat">Category
+            <select id="task-cat"></select>
+          </label>
+        </div>
+        <div class="row2">
+          <label for="task-who">Who will do it
+            <input id="task-who" maxlength="60" placeholder="e.g. Suhel">
+          </label>
+          <label for="task-due">By date
+            <input id="task-due" type="date">
+          </label>
+        </div>
+        <label for="task-cost">Money needed (₹) <span style="font-weight:400">adds to total budget</span>
+          <input id="task-cost" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 50000 (leave empty if none)">
+        </label>
+        <p class="msg" id="task-msg"></p>
+        <div class="actions">
+          <button class="btn" type="submit" id="task-save">Add task</button>
+          <button class="btn ghost" type="button" id="task-cancel" hidden>Cancel</button>
+        </div>
+      </form>
+    </div>
+    <div class="box">
+      <div class="progress"><span id="prog-text" class="num">0 of 0 done</span><div class="meter"><i id="prog-bar" style="width:0%"></i></div></div>
+      <div class="filters" id="task-filters"></div>
+      <ul class="list" id="task-list"><li class="empty">Loading tasks…</li></ul>
+    </div>
+  </section>
+
+  <!-- MONEY -->
+  <section class="panel" id="p-money" role="tabpanel" aria-labelledby="tab-money" hidden>
+    <div class="box editor-only">
+      <h2 id="led-form-title">Add money entry</h2>
+      <form id="led-form">
+        <div class="seg" role="group" aria-label="Entry type">
+          <button type="button" class="in" id="led-in" aria-pressed="false">+ Money in</button>
+          <button type="button" class="out" id="led-out" aria-pressed="true">− Money out</button>
+        </div>
+        <div class="row2">
+          <label for="led-amt">Amount (₹)
+            <input id="led-amt" type="number" min="1" step="1" inputmode="numeric" required placeholder="e.g. 25000">
+          </label>
+          <label for="led-date">Date
+            <input id="led-date" type="date" required>
+          </label>
+        </div>
+        <label for="led-title" id="led-title-label">What for
+          <input id="led-title" required maxlength="140" placeholder="e.g. Tent house advance">
+        </label>
+        <div class="row2">
+          <label for="led-cat">Category
+            <select id="led-cat"></select>
+          </label>
+          <label for="led-event">For
+            <select id="led-event"></select>
+          </label>
+        </div>
+        <label for="led-task" id="led-task-label">For task (optional)
+          <select id="led-task"></select>
+        </label>
+        <label for="led-person" id="led-person-label">Paid by
+          <input id="led-person" maxlength="60" placeholder="e.g. Abul Hasan Khan">
+        </label>
+        <p class="msg" id="led-msg"></p>
+        <div class="actions">
+          <button class="btn" type="submit" id="led-save">Add entry</button>
+          <button class="btn ghost" type="button" id="led-cancel" hidden>Cancel</button>
+        </div>
+      </form>
+    </div>
+    <div class="box">
+      <div class="filters" id="led-filters"></div>
+      <ul class="list" id="led-list"><li class="empty">Loading entries…</li></ul>
+      <div class="split">
+        <div><h3>Spent by category</h3><div class="bars" id="by-cat"></div></div>
+        <div><h3>Spent by event</h3><div class="bars" id="by-event"></div></div>
+      </div>
+    </div>
+  </section>
+  <!-- ACTIVITY -->
+  <section class="panel" id="p-log" role="tabpanel" aria-labelledby="tab-log" hidden style="grid-template-columns:minmax(0,1fr)">
+    <div class="box">
+      <h2>Who did what</h2>
+      <p class="sub" style="margin:0 0 10px">Every task or money entry that is added, changed, ticked or deleted shows here, newest first.</p>
+      <div class="filters" id="log-filters"></div>
+      <ul class="list" id="log-list"><li class="empty">Loading activity…</li></ul>
+    </div>
+  </section>
+</div>
+
+<script>
+var EVENTS = [
+  { id: "nikah30", label: "Nikah · Seraj & Nargish (30 Dec)", short: "Nikah 30 Dec" },
+  { id: "nikah31", label: "Nikah · Fahim & Shahiba (31 Dec)", short: "Nikah 31 Dec" },
+  { id: "walima", label: "Walima (1 Jan)", short: "Walima" },
+  { id: "general", label: "General / both", short: "General" }
+];
+var OUT_CATS = ["Tent & venue", "Catering & food", "Clothes & jewellery", "Bari & gifts", "Invitations", "Decoration & lights", "Baraat & travel", "Mehr & Nikah", "Guest stay", "Other"];
+var IN_CATS = ["Family contribution", "Shagun / gift", "Savings", "Loan / udhaar", "Other"];
+var inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
+var money = function (n) { return inr.format(Math.round(n || 0)); };
+var evShort = function (id) { var e = EVENTS.find(function (x) { return x.id === id; }); return e ? e.short : "General"; };
+var $ = function (id) { return document.getElementById(id); };
+function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+function today() { var d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+function fmtDate(s) { if (!s) return ""; var d = new Date(s + "T00:00:00"); return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }); }
+function fill(sel, items, valueKey, labelKey) {
+  sel.textContent = "";
+  items.forEach(function (it) { var o = el("option", null, typeof it === "string" ? it : it[labelKey]); o.value = typeof it === "string" ? it : it[valueKey]; sel.appendChild(o); });
+}
+
+var state = { tasks: [], ledger: [], log: [], logFilter: "all", canWrite: true, uid: null, taskFilter: "pending", evFilter: "all", ledFilter: "all", ledType: "out", editingTask: null, editingLed: null, loaded: { tasks: false, ledger: false, log: false } };
+var db = null, user = null, profiles = {};
+
+/* ---------- tabs (remembered per viewer) ---------- */
+var TABS = ["todo", "money", "log"];
+function showTab(name) {
+  if (TABS.indexOf(name) < 0) name = "todo";
+  TABS.forEach(function (t) { $("tab-" + t).setAttribute("aria-selected", String(t === name)); $("p-" + t).hidden = t !== name; });
+  try { localStorage.setItem("planner-tab", name); } catch (e) {}
+}
+TABS.forEach(function (t) { $("tab-" + t).onclick = function () { showTab(t); }; });
+try { showTab(location.hash.slice(1) || localStorage.getItem("planner-tab") || "todo"); } catch (e) {}
+
+/* ---------- static form options ---------- */
+fill($("task-event"), EVENTS, "id", "label"); $("task-event").value = "general";
+fill($("task-cat"), OUT_CATS);
+fill($("led-event"), EVENTS, "id", "label"); $("led-event").value = "general";
+$("led-date").value = today();
+function setLedType(t) {
+  state.ledType = t;
+  $("led-in").setAttribute("aria-pressed", String(t === "in"));
+  $("led-out").setAttribute("aria-pressed", String(t === "out"));
+  var keep = $("led-cat").value;
+  fill($("led-cat"), t === "in" ? IN_CATS : OUT_CATS);
+  if ((t === "in" ? IN_CATS : OUT_CATS).indexOf(keep) >= 0) $("led-cat").value = keep;
+  $("led-person-label").firstChild.textContent = t === "in" ? "Given by " : "Paid by ";
+  $("led-task-label").hidden = t === "in";
+  $("led-title").placeholder = t === "in" ? "e.g. Contribution from Mamu" : "e.g. Tent house advance";
+}
+$("led-in").onclick = function () { setLedType("in"); };
+$("led-out").onclick = function () { setLedType("out"); };
+setLedType("out");
+
+/* ---------- filters ---------- */
+function chips(box, opts, current, onPick) {
+  box.textContent = "";
+  opts.forEach(function (o) {
+    var b = el("button", "chip", o.label); b.type = "button";
+    b.setAttribute("aria-pressed", String(o.id === current));
+    b.onclick = function () { onPick(o.id); };
+    box.appendChild(b);
+  });
+}
+
+/* ---------- people (names resolved fresh on every render; only ids are stored) ---------- */
+async function resolve(ids) {
+  if (!user) return;
+  ids = ids.filter(Boolean);
+  if (!ids.length) return;
+  try { profiles = Object.assign(profiles, await user.profiles(ids)); } catch (e) {}
+}
+function nameOf(id) { return "You"; }
+
+/* ---------- render ---------- */
+function renderTotals() {
+  var tin = 0, tout = 0, nin = 0, nout = 0;
+  state.ledger.forEach(function (r) { if (r.type === "in") { tin += r.amount; nin++; } else { tout += r.amount; nout++; } });
+  $("t-in").textContent = money(tin); $("t-in-h").textContent = nin + (nin === 1 ? " entry" : " entries");
+  $("t-out").textContent = money(tout); $("t-out-h").textContent = nout + (nout === 1 ? " entry" : " entries");
+  var bal = tin - tout; $("t-bal").textContent = money(bal); $("t-bal").classList.toggle("neg", bal < 0);
+  var costed = state.tasks.filter(function (t) { return t.cost > 0; });
+  var b = costed.reduce(function (s, t) { return s + t.cost; }, 0);
+  if (b) {
+    $("t-budget").textContent = money(b);
+    $("t-budget-h").textContent = "Money needed for " + costed.length + (costed.length === 1 ? " task" : " tasks");
+    var left = b - tout, pct = Math.min(100, Math.round(tout / b * 100));
+    $("t-budget-left").textContent = left >= 0 ? money(left) + " left to spend (" + pct + "% used)" : money(-left) + " over budget";
+    $("t-budget-bar").style.width = pct + "%"; $("t-budget-bar").classList.toggle("over", left < 0);
+  } else {
+    $("t-budget").textContent = "₹0"; $("t-budget-h").textContent = "Add “money needed” to tasks"; $("t-budget-left").textContent = ""; $("t-budget-bar").style.width = "0%";
+  }
+}
+
+function renderTasks() {
+  var all = state.tasks;
+  var done = all.filter(function (t) { return t.done; }).length;
+  $("prog-text").textContent = done + " of " + all.length + " done";
+  $("prog-bar").style.width = (all.length ? Math.round(done / all.length * 100) : 0) + "%";
+  $("c-todo").textContent = all.length ? "(" + (all.length - done) + " left)" : "";
+  chips($("task-filters"), [
+    { id: "pending", label: "Pending" }, { id: "done", label: "Done" }, { id: "all", label: "All" }, { id: "mine", label: "Added by me" }
+  ].concat(EVENTS.map(function (e) { return { id: "ev:" + e.id, label: e.short }; })), state.evFilter !== "all" ? "ev:" + state.evFilter : state.taskFilter, function (id) {
+    if (id.indexOf("ev:") === 0) { state.evFilter = state.evFilter === id.slice(3) ? "all" : id.slice(3); }
+    else { state.taskFilter = id; state.evFilter = "all"; }
+    renderTasks();
+  });
+  var list = all.filter(function (t) {
+    if (state.evFilter !== "all") return t.event === state.evFilter;
+    if (state.taskFilter === "mine") return !!state.uid && t.createdBy === state.uid;
+    return state.taskFilter === "all" ? true : state.taskFilter === "done" ? t.done : !t.done;
+  }).sort(function (a, b) {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return (a.due || "9999").localeCompare(b.due || "9999") || (a.createdAt || 0) - (b.createdAt || 0);
+  });
+  var ul = $("task-list"); ul.textContent = "";
+  if (!state.loaded.tasks) { ul.appendChild(el("li", "empty", "Loading tasks…")); return; }
+  if (!list.length) {
+    var li = el("li", "empty");
+    if (!all.length) { li.appendChild(el("b", null, "No tasks yet. ")); li.appendChild(document.createTextNode(state.canWrite ? "Add the first one with the form." : "Nothing has been added yet.")); }
+    else li.textContent = state.taskFilter === "done" ? "Nothing finished yet." : state.taskFilter === "mine" ? "You have not added any tasks yet." : "Nothing here. Try another filter.";
+    ul.appendChild(li); return;
+  }
+  var t0 = today();
+  var spentOn = {};
+  state.ledger.forEach(function (r) { if (r.type === "out" && r.task) spentOn[r.task] = (spentOn[r.task] || 0) + r.amount; });
+  list.forEach(function (t) {
+    var li = el("li", "item" + (t.done ? " done" : ""));
+    var cb = el("input", "check"); cb.type = "checkbox"; cb.checked = !!t.done; cb.id = "chk-" + t.id;
+    cb.setAttribute("aria-label", "Mark done: " + t.title); cb.disabled = !state.canWrite;
+    cb.onchange = async function () {
+      if (await write(db.doc("tasks/" + t.id).update({ done: cb.checked, doneBy: cb.checked ? state.uid : null, updatedAt: Date.now() }), "task-msg"))
+        log(cb.checked ? "ticked" : "unticked", "task", t.title, t.cost);
+    };
+    var mid = el("div"); mid.style.minWidth = "0";
+    mid.appendChild(el("div", "t", t.title));
+    var meta = el("div", "meta");
+    meta.appendChild(el("span", "tag ev", evShort(t.event)));
+    if (t.category) meta.appendChild(el("span", "tag", t.category));
+    if (t.who) meta.appendChild(el("span", null, "Who: " + t.who));
+    if (t.due) meta.appendChild(el("span", "due" + (!t.done && t.due < t0 ? " late" : ""), (!t.done && t.due < t0 ? "Overdue · " : "By ") + fmtDate(t.due)));
+    var spent = spentOn[t.id] || 0;
+    if (t.cost > 0 || spent) meta.appendChild(el("span", "tag num", (spent ? money(spent) + " spent of " : "Needs ") + money(t.cost || 0)));
+    if (t.createdBy) meta.appendChild(el("span", null, "Added by " + nameOf(t.createdBy)));
+    if (t.done && t.doneBy) meta.appendChild(el("span", null, "✓ " + nameOf(t.doneBy)));
+    mid.appendChild(meta);
+    li.appendChild(cb); li.appendChild(mid);
+    if (state.canWrite) li.appendChild(ops(function () { editTask(t); }, function () { return db.doc("tasks/" + t.id).delete().then(function () { log("deleted", "task", t.title, t.cost); }); }, "task-msg"));
+    else li.appendChild(el("span"));
+    ul.appendChild(li);
+  });
+}
+
+function renderLedger() {
+  var all = state.ledger;
+  $("c-money").textContent = all.length ? "(" + all.length + ")" : "";
+  chips($("led-filters"), [{ id: "all", label: "All" }, { id: "in", label: "Money in" }, { id: "out", label: "Money out" }]
+    .concat(EVENTS.map(function (e) { return { id: "ev:" + e.id, label: e.short }; })), state.ledFilter, function (id) { state.ledFilter = state.ledFilter === id && id !== "all" ? "all" : id; renderLedger(); });
+  var f = state.ledFilter;
+  var list = all.filter(function (r) { return f === "all" ? true : f === "in" || f === "out" ? r.type === f : r.event === f.slice(3); })
+    .sort(function (a, b) { return (b.date || "").localeCompare(a.date || "") || (b.createdAt || 0) - (a.createdAt || 0); });
+  var ul = $("led-list"); ul.textContent = "";
+  if (!state.loaded.ledger) { ul.appendChild(el("li", "empty", "Loading entries…")); }
+  else if (!list.length) {
+    var li = el("li", "empty");
+    if (!all.length) { li.appendChild(el("b", null, "No money entries yet. ")); li.appendChild(document.createTextNode(state.canWrite ? "Add money received or spent with the form." : "Nothing has been added yet.")); }
+    else li.textContent = "No entries match this filter.";
+    ul.appendChild(li);
+  } else list.forEach(function (r) {
+    var li = el("li", "item");
+    li.appendChild(el("span", "ltype " + r.type, r.type === "in" ? "+" : "−"));
+    var mid = el("div"); mid.style.minWidth = "0";
+    mid.appendChild(el("div", "t", r.title));
+    var meta = el("div", "meta");
+    meta.appendChild(el("span", null, fmtDate(r.date)));
+    meta.appendChild(el("span", "tag ev", evShort(r.event)));
+    if (r.category) meta.appendChild(el("span", "tag", r.category));
+    if (r.person) meta.appendChild(el("span", null, (r.type === "in" ? "From " : "Paid by ") + r.person));
+    var lt = r.task && state.tasks.find(function (x) { return x.id === r.task; });
+    if (lt) meta.appendChild(el("span", null, "Task: " + lt.title));
+    meta.appendChild(el("span", null, "Added by " + nameOf(r.createdBy)));
+    mid.appendChild(meta);
+    var right = el("div", "ledger-right");
+    right.appendChild(el("span", "amt num " + r.type, (r.type === "in" ? "+ " : "− ") + money(r.amount)));
+    if (state.canWrite) right.appendChild(ops(function () { editLed(r); }, function () { return db.doc("ledger/" + r.id).delete().then(function () { log("deleted", r.type === "in" ? "money in" : "money out", r.title, r.amount); }); }, "led-msg"));
+    li.appendChild(mid); li.appendChild(right);
+    ul.appendChild(li);
+  });
+  bars($("by-cat"), group(all.filter(function (r) { return r.type === "out"; }), function (r) { return r.category || "Other"; }));
+  bars($("by-event"), group(all.filter(function (r) { return r.type === "out"; }), function (r) { return evShort(r.event); }));
+}
+function group(rows, key) { var m = {}; rows.forEach(function (r) { var k = key(r); m[k] = (m[k] || 0) + r.amount; }); return Object.keys(m).map(function (k) { return [k, m[k]]; }).sort(function (a, b) { return b[1] - a[1]; }); }
+function bars(box, rows) {
+  box.textContent = "";
+  if (!rows.length) { box.appendChild(el("div", "h", "Nothing spent yet.")); box.lastChild.style.color = "var(--ink-soft)"; return; }
+  var max = rows[0][1];
+  rows.forEach(function (r) {
+    var b = el("div", "bar"); b.appendChild(el("span", null, r[0])); b.appendChild(el("span", "num", money(r[1])));
+    var m = el("div", "meter"); var i = el("i"); i.style.width = Math.max(2, Math.round(r[1] / max * 100)) + "%"; m.appendChild(i); b.appendChild(m);
+    box.appendChild(b);
+  });
+}
+
+/* Edit / two-step delete buttons (the page cannot show confirm dialogs) */
+function ops(onEdit, onDelete, msgId) {
+  var w = el("div", "ops");
+  var e = el("button", "op", "Edit"); e.type = "button"; e.onclick = onEdit;
+  var d = el("button", "op", "Delete"); d.type = "button";
+  var armed = null;
+  d.onclick = function () {
+    if (!armed) { d.textContent = "Sure?"; d.classList.add("danger"); armed = setTimeout(function () { armed = null; d.textContent = "Delete"; d.classList.remove("danger"); }, 3000); return; }
+    clearTimeout(armed); armed = null; d.disabled = true; write(onDelete(), msgId);
+  };
+  w.appendChild(e); w.appendChild(d); return w;
+}
+
+async function render() {
+  var ids = [];
+  state.ledger.forEach(function (r) { ids.push(r.createdBy); });
+  state.tasks.forEach(function (t) { ids.push(t.doneBy, t.createdBy); });
+  state.log.forEach(function (a) { ids.push(a.by); });
+  await resolve(ids);
+  renderTotals(); renderTasks(); renderLedger(); renderTaskSelect(); renderLog();
+}
+
+/* ---------- writes ---------- */
+async function write(promise, msgId) {
+  $(msgId).textContent = "";
+  try { await promise; return true; }
+  catch (e) {
+    var code = e && e.code;
+    if (code === "permission-denied") $(msgId).textContent = "Not allowed. Sign out and sign in again with your own account.";
+    else if (code === "resource-exhausted") $(msgId).textContent = "Firebase's free daily limit is used up. Try again tomorrow.";
+    else $(msgId).textContent = "Could not save. Check your connection and try again.";
+    return false;
+  }
+}
+
+/* tasks */
+$("task-form").onsubmit = async function (ev) {
+  ev.preventDefault();
+  var title = $("task-title").value.trim(); if (!title) return;
+  var cost = Math.max(0, Math.round(Number($("task-cost").value) || 0));
+  var body = { title: title, event: $("task-event").value, category: $("task-cat").value, who: $("task-who").value.trim(), due: $("task-due").value || "", cost: cost, updatedAt: Date.now() };
+  $("task-save").disabled = true;
+  var ok;
+  if (state.editingTask) ok = await write(db.doc("tasks/" + state.editingTask).update(body), "task-msg");
+  else { body.done = false; body.createdAt = Date.now(); body.createdBy = state.uid; ok = await write(db.collection("tasks").add(body), "task-msg"); }
+  $("task-save").disabled = false;
+  if (ok) { state.everWrote = true; log(state.editingTask ? "edited" : "added", "task", title, cost); resetTask(); }
+};
+function editTask(t) {
+  state.editingTask = t.id;
+  $("task-title").value = t.title; $("task-event").value = t.event || "general"; $("task-cat").value = t.category || "Other";
+  $("task-who").value = t.who || ""; $("task-due").value = t.due || ""; $("task-cost").value = t.cost || "";
+  $("task-form-title").textContent = "Edit task"; $("task-save").textContent = "Save changes"; $("task-cancel").hidden = false;
+  $("task-title").focus(); $("task-form").scrollIntoView({ block: "nearest" });
+}
+function resetTask() {
+  state.editingTask = null; $("task-form").reset(); $("task-event").value = "general";
+  $("task-form-title").textContent = "Add a task"; $("task-save").textContent = "Add task"; $("task-cancel").hidden = true;
+}
+$("task-cancel").onclick = resetTask;
+
+/* ledger */
+$("led-form").onsubmit = async function (ev) {
+  ev.preventDefault();
+  var amt = Math.round(Number($("led-amt").value));
+  if (!(amt > 0)) { $("led-msg").textContent = "Enter an amount above zero."; return; }
+  var title = $("led-title").value.trim(); if (!title) return;
+  var body = { type: state.ledType, amount: amt, title: title, category: $("led-cat").value, event: $("led-event").value, person: $("led-person").value.trim(), task: state.ledType === "out" ? $("led-task").value : "", date: $("led-date").value || today(), updatedAt: Date.now() };
+  $("led-save").disabled = true;
+  var ok;
+  if (state.editingLed) ok = await write(db.doc("ledger/" + state.editingLed).update(body), "led-msg");
+  else { body.createdAt = Date.now(); body.createdBy = state.uid; ok = await write(db.collection("ledger").add(body), "led-msg"); }
+  $("led-save").disabled = false;
+  if (ok) { state.everWrote = true; log(state.editingLed ? "edited" : "added", body.type === "in" ? "money in" : "money out", title, amt); resetLed(); }
+};
+function editLed(r) {
+  state.editingLed = r.id; setLedType(r.type);
+  $("led-amt").value = r.amount; $("led-date").value = r.date || today(); $("led-title").value = r.title;
+  $("led-cat").value = r.category || "Other"; $("led-event").value = r.event || "general"; $("led-person").value = r.person || ""; $("led-task").value = r.task || "";
+  $("led-form-title").textContent = "Edit entry"; $("led-save").textContent = "Save changes"; $("led-cancel").hidden = false;
+  $("led-amt").focus(); $("led-form").scrollIntoView({ block: "nearest" });
+}
+function resetLed() {
+  state.editingLed = null; var t = state.ledType; $("led-form").reset(); setLedType(t);
+  $("led-date").value = today(); $("led-event").value = "general";
+  $("led-form-title").textContent = "Add money entry"; $("led-save").textContent = "Add entry"; $("led-cancel").hidden = true;
+}
+$("led-cancel").onclick = resetLed;
+
+/* if Firebase cannot load (no internet, or blocked), say so instead of a dead sign-in button */
+setTimeout(function () {
+  var msg = $("login-msg");
+  if (!window.__plannerReady && !msg.textContent) msg.textContent = "Could not connect. Check your internet connection and reload the page.";
+}, 10000);
+
+/* activity log: one small document per change */
+function log(action, kind, title, amount) {
+  if (!db) return;
+  db.collection("activity").add({ action: action, kind: kind, title: String(title || "").slice(0, 140), amount: Number(amount) || 0, by: state.uid, at: Date.now() }).catch(function () {});
+}
+function renderTaskSelect() {
+  var sel = $("led-task"), keep = sel.value;
+  sel.textContent = "";
+  var none = el("option", null, "No task"); none.value = ""; sel.appendChild(none);
+  state.tasks.slice().sort(function (a, b) { return a.title.localeCompare(b.title); }).forEach(function (t) {
+    var o = el("option", null, t.title + (t.cost ? " (" + money(t.cost) + ")" : "")); o.value = t.id; sel.appendChild(o);
+  });
+  sel.value = keep;
+}
+var VERB = { added: "added", edited: "changed", deleted: "deleted", ticked: "ticked off", unticked: "un-ticked" };
+function ago(ms) {
+  var m = Math.round((Date.now() - ms) / 60000);
+  if (m < 1) return "just now"; if (m < 60) return m + " min ago";
+  var h = Math.round(m / 60); if (h < 24) return h + " h ago";
+  return new Date(ms).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+function renderLog() {
+  var ids = [];
+  state.log.forEach(function (a) { if (a.by && ids.indexOf(a.by) < 0) ids.push(a.by); });
+  var opts = [{ id: "all", label: "Everyone" }].concat(ids.map(function (id) { return { id: id, label: id === state.uid ? "Me" : nameOf(id) }; }));
+  chips($("log-filters"), opts, state.logFilter, function (id) { state.logFilter = id; renderLog(); });
+  var ul = $("log-list"); ul.textContent = "";
+  var rows = state.log.filter(function (a) { return state.logFilter === "all" || a.by === state.logFilter; });
+  if (!state.loaded.log) { ul.appendChild(el("li", "empty", "Loading activity…")); return; }
+  if (!rows.length) { ul.appendChild(el("li", "empty", "Nothing has changed yet. Changes made from now on show up here.")); return; }
+  rows.forEach(function (a) {
+    var li = el("li", "logrow");
+    var av = profiles[a.by] && profiles[a.by].avatarUrl;
+    if (av) { var img = el("img"); img.alt = ""; img.src = av; li.appendChild(img); } else li.appendChild(el("span"));
+    var mid = el("div"); mid.style.minWidth = "0";
+    mid.appendChild(el("b", null, a.by === state.uid ? "You" : nameOf(a.by)));
+    mid.appendChild(document.createTextNode(" "));
+    mid.appendChild(el("span", "verb " + a.action, VERB[a.action] || a.action));
+    mid.appendChild(document.createTextNode(" " + (a.kind || "item") + ": " + (a.title || "")));
+    if (a.amount) mid.appendChild(el("span", "num", " · " + money(a.amount)));
+    li.appendChild(mid);
+    li.appendChild(el("span", "when", ago(a.at || 0)));
+    ul.appendChild(li);
+  });
+}
+
+function setReadOnly() {
+  state.canWrite = false;
+  document.querySelectorAll(".editor-only").forEach(function (n) { n.hidden = true; });
+  document.querySelectorAll(".panel").forEach(function (p) { p.style.gridTemplateColumns = "minmax(0,1fr)"; });
+  $("status").textContent = "View only"; $("status").className = "pill ro";
+  render();
+}
+
+/* ---------- connect (called by the Firebase module below once you are signed in) ---------- */
+var unsubs = [];
+window.connect = connect;
+window.disconnect = disconnect;
+function connect(adapter, uid, email) {
+  db = adapter; state.uid = uid;
+  state.loaded = { tasks: false, ledger: false, log: false };
+  $("who-email").textContent = email || "";
+  $("status").textContent = "Saved online"; $("status").className = "pill";
+  var lost = function () { $("banner").hidden = false; $("banner").textContent = "Live updates stopped. Reload the page to reconnect."; };
+  unsubs.push(db.collection("tasks").onSnapshot(function (snap) {
+    state.tasks = snap.docs.map(function (d) { var x = d.data(); return Object.assign({ id: d.id }, x, { cost: Number(x.cost) || 0 }); });
+    state.loaded.tasks = true; render();
+  }, lost));
+  unsubs.push(db.collection("ledger").onSnapshot(function (snap) {
+    state.ledger = snap.docs.map(function (d) { var x = d.data(); return Object.assign({ id: d.id }, x, { amount: Number(x.amount) || 0, type: x.type === "in" ? "in" : "out" }); });
+    state.loaded.ledger = true; render();
+  }, lost));
+  unsubs.push(db.collection("activity").orderBy("at", "desc").limit(150).onSnapshot(function (snap) {
+    state.log = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+    state.loaded.log = true; render();
+  }, lost));
+}
+function disconnect() {
+  unsubs.forEach(function (u) { try { u(); } catch (e) {} }); unsubs = [];
+  db = null; state.tasks = []; state.ledger = []; state.log = [];
+}
+
+/* ---------- backup and restore (a JSON file you keep yourself) ---------- */
+$("backup-btn").onclick = function () {
+  var strip = function (rows) { return rows.map(function (r) { return Object.assign({}, r); }); };
+  var data = { app: "khan-shaadi-planner", exported: new Date().toISOString(), tasks: strip(state.tasks), ledger: strip(state.ledger), activity: strip(state.log) };
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "shaadi-planner-backup-" + today() + ".json"; document.body.appendChild(a); a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+};
+$("restore-file").onchange = async function () {
+  var f = this.files && this.files[0]; this.value = "";
+  if (!f || !db) return;
+  try {
+    var data = JSON.parse(await f.text());
+    var n = await db.restore(data);
+    $("banner").hidden = false; $("banner").textContent = "Restored " + n + " items from the backup.";
+  } catch (e) {
+    $("banner").hidden = false; $("banner").textContent = "Could not restore that file. Choose a backup file made by this planner.";
+  }
+};
+render();
+</script>
+
+<script type="module">
+/* Firebase: login and storage. Everything is stored under users/<your id>/ and the
+   Firestore rules let only that signed-in account read or write it. */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, setDoc, onSnapshot, query, orderBy, limit, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const $ = (id) => document.getElementById(id);
+const cfg = window.FIREBASE_CONFIG || {};
+if (!cfg.apiKey || cfg.apiKey.startsWith("PASTE")) {
+  $("login-msg").textContent = "Setup not finished: the Firebase settings have not been added yet.";
+  $("login-btn").disabled = true;
+} else {
+  const app = initializeApp(cfg);
+  const auth = getAuth(app);
+  const fs = getFirestore(app);
+
+  /* the same small interface the planner code already uses */
+  function adapter(uid) {
+    const base = "users/" + uid + "/";
+    const wrap = (q) => ({
+      orderBy: (f, d) => wrap(query(q, orderBy(f, d || "asc"))),
+      limit: (n) => wrap(query(q, limit(n))),
+      onSnapshot: (next, err) => onSnapshot(q, next, err)
+    });
+    return {
+      collection(path) { const c = collection(fs, base + path); const w = wrap(c); w.add = (data) => addDoc(c, data); return w; },
+      doc(path) { const r = doc(fs, base + path); return { update: (d) => updateDoc(r, d), delete: () => deleteDoc(r), set: (d) => setDoc(r, d) }; },
+      async restore(data) {
+        let n = 0, batch = writeBatch(fs), inBatch = 0;
+        for (const key of ["tasks", "ledger", "activity"]) {
+          for (const row of (data && Array.isArray(data[key]) ? data[key] : [])) {
+            if (!row || typeof row !== "object") continue;
+            const { id, ...rest } = row;
+            const ref = id ? doc(fs, base + key + "/" + String(id)) : doc(collection(fs, base + key));
+            batch.set(ref, rest); n++; inBatch++;
+            if (inBatch === 400) { await batch.commit(); batch = writeBatch(fs); inBatch = 0; }
+          }
+        }
+        if (inBatch) await batch.commit();
+        return n;
+      }
+    };
+  }
+
+  window.__plannerReady = true;
+  onAuthStateChanged(auth, (u) => {
+    if (u) {
+      $("login").hidden = true; $("app").hidden = false;
+      window.connect(adapter(u.uid), u.uid, u.email);
+    } else {
+      window.disconnect();
+      $("app").hidden = true; $("login").hidden = false;
+    }
+  });
+
+  $("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $("login-msg").textContent = ""; $("login-btn").disabled = true;
+    try { await signInWithEmailAndPassword(auth, $("login-email").value.trim(), $("login-pass").value); $("login-pass").value = ""; }
+    catch (err) {
+      const c = err && err.code || "";
+      $("login-msg").textContent = c.includes("too-many-requests") ? "Too many tries. Wait a few minutes and try again."
+        : c.includes("network") ? "No internet connection. Check it and try again."
+        : "Wrong email or password.";
+    }
+    $("login-btn").disabled = false;
+  });
+  $("logout-btn").addEventListener("click", () => signOut(auth));
+}
+</script>
+</body>
+</html>
