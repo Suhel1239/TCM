@@ -340,32 +340,6 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
   .hindi { font-size: .82rem; }
   .verse .ar { font-size: 1.6rem; }
 }
-
-/* minarets inside the card: a skyline that closes the card, on a soft glow like the front page */
-.skyline { width: 100%; display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-top: 6px;
-  padding: 26px 4px 0; border-bottom: 1.5px solid var(--gold);
-  background: radial-gradient(ellipse at 50% 100%, rgba(240,210,140,.55), rgba(240,210,140,0) 70%); }
-.skyline svg { display: block; overflow: visible; }
-.sk-side { display: flex; align-items: flex-end; gap: 6px; }
-.skyline .k1 { height: 200px; width: 30px; }
-.skyline .k2 { height: 140px; width: 21px; }
-.sk-arch { width: min(240px, 46%); height: auto; aspect-ratio: 200 / 120; }
-/* minarets standing beside the card where the screen is wide enough */
-.page-minarets { position: fixed; bottom: 0; z-index: 0; display: none; align-items: flex-end; gap: 10px; pointer-events: none;
-  filter: drop-shadow(0 0 14px rgba(232,200,120,.45)); }
-.page-minarets svg { display: block; overflow: visible; }
-.page-minarets .p1 { height: min(72vh, 600px); width: calc(min(72vh, 600px) * .15); }
-.page-minarets .p2 { height: min(52vh, 430px); width: calc(min(52vh, 430px) * .15); }
-.page-minarets.left { left: max(16px, calc((100vw - 920px) / 4 - 40px)); }
-.page-minarets.right { right: max(16px, calc((100vw - 920px) / 4 - 40px)); }
-@media (min-width: 1180px) { .page-minarets { display: flex; } }
-@media (min-width: 900px) { .skyline .k1 { height: 280px; width: 42px; } .skyline .k2 { height: 200px; width: 30px; } .sk-side { gap: 10px; } }
-@media (max-width: 520px) {
-  .skyline { padding-top: 18px; gap: 4px; }
-  .sk-side { gap: 3px; }
-  .skyline .k1 { height: 130px; width: 19.5px; }
-  .skyline .k2 { height: 92px; width: 13.8px; }
-}
 /* minarets standing on both sides of the opening screen */
 .minarets { position: absolute; bottom: 16px; display: flex; align-items: flex-end; gap: 6px; pointer-events: none; z-index: 1;
   filter: drop-shadow(0 0 14px rgba(232,200,120,.45)); }
@@ -468,9 +442,6 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
 <canvas class="sky" id="sky" aria-hidden="true"></canvas>
 <canvas class="burst" id="burst" aria-hidden="true"></canvas>
 <button class="replay" id="replay" type="button" aria-label="Phir se kholiye" hidden>↺<span class="replay-text"> Phir se kholiye</span></button>
-
-<div class="page-minarets left" aria-hidden="true"><svg class="p1" aria-hidden="true"><use href="#minaret"/></svg><svg class="p2" aria-hidden="true"><use href="#minaret"/></svg></div>
-<div class="page-minarets right" aria-hidden="true"><svg class="p2" aria-hidden="true"><use href="#minaret"/></svg><svg class="p1" aria-hidden="true"><use href="#minaret"/></svg></div>
 
 <main class="card">
   <div class="band" aria-hidden="true"></div>
@@ -612,22 +583,9 @@ canvas.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40
 
     <div class="muntazir">
       <span class="lbl"><span class="ur" lang="ur">منتظرین</span><span class="en">Awaiting you</span></span>
-      <p class="ur" lang="ur">حسن&nbsp;خان&nbsp;· سہیل&nbsp;خان&nbsp;· عبدالمالک&nbsp;خان&nbsp;· سعود&nbsp;خان&nbsp;· حماد&nbsp;خان&nbsp;· دانش&nbsp;خان<br>و تمام اہلِ خانہ</p>
+      <p class="ur" lang="ur">حسن&nbsp;خان · سہیل&nbsp;خان · عبدالمالک&nbsp;خان · سعود&nbsp;خان · حماد&nbsp;خان · دانش&nbsp;خان<br>و تمام اہلِ خانہ</p>
       <p class="en">Hasan&nbsp;Khan · Suhel&nbsp;Khan · Abdul&nbsp;Malik&nbsp;Khan · Saud&nbsp;Khan · Hammad&nbsp;Khan · Danish&nbsp;Khan &amp; family</p>
     </div>
-    </div>
-
-    <div class="skyline" aria-hidden="true">
-      <div class="sk-side"><svg class="k1" aria-hidden="true"><use href="#minaret"/></svg><svg class="k2" aria-hidden="true"><use href="#minaret"/></svg></div>
-      <svg class="sk-arch" viewBox="0 0 200 120">
-        <g fill="url(#minFill)" stroke="#b8913f" stroke-width="1.4" stroke-linejoin="round">
-          <path d="M40 120 V70 Q40 26 100 14 Q160 26 160 70 V120 Z"/>
-          <path d="M70 120 V84 Q70 60 100 54 Q130 60 130 84 V120 Z" fill="#f3e2ae"/>
-          <path d="M10 120 V96 Q10 82 24 80 Q38 82 38 96 V120 Z M162 120 V96 Q162 82 176 80 Q190 82 190 96 V120 Z"/>
-        </g>
-        <path d="M100 14 V2" stroke="#b8913f" stroke-width="1.4"/><circle cx="100" cy="4" r="3" fill="#d4ad55"/>
-      </svg>
-      <div class="sk-side"><svg class="k2" aria-hidden="true"><use href="#minaret"/></svg><svg class="k1" aria-hidden="true"><use href="#minaret"/></svg></div>
     </div>
 
   </div>
